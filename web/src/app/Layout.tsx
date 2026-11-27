@@ -19,6 +19,7 @@ const NAV = [
   { to: "/app/branding", label: "Branding", Icon: BrushIcon },
   { to: "/app/clients", label: "Clients", Icon: IncomeIcon },
   { to: "/app/reviews", label: "Go-live reviews", Icon: BookIcon },
+  { to: "/app/signing", label: "Signing log", Icon: BookIcon },
   { to: "/app/team", label: "Team", Icon: UsersIcon },
   { to: "/app/security", label: "Security", Icon: LockIcon },
   { to: "/app/billing", label: "Plan & billing", Icon: ReceiptIcon },
@@ -77,7 +78,7 @@ function ConsoleShell({ me, setMe, ws }: { me: Me | null | undefined; setMe: (m:
       <aside className="side">
         <NavLink to="/" style={{ padding: 0 }}><Logo name={ws ? "Diamondz Tokenize" : tenant?.name ?? "Diamondz Tokenize"} logoUrl={ws ? undefined : tenant?.brand.logoUrl} /></NavLink>
         {ws && <WorkspaceBox ws={ws} />}
-        {NAV.filter((n) => (n.to === "/app/reviews" ? (ws ? ws.tenant.id : tenant?.id) === "diamondz" && (me?.role === "owner" || me?.role === "admin" || !me?.account) : !["/app/team", "/app/security", "/app/clients"].includes(n.to) || ws)).map(({ to, label, Icon }) => (
+        {NAV.filter((n) => ((n.to === "/app/reviews" || n.to === "/app/signing") ? (ws ? ws.tenant.id : tenant?.id) === "diamondz" && (me?.role === "owner" || me?.role === "admin" || !me?.account) : !["/app/team", "/app/security", "/app/clients"].includes(n.to) || ws)).map(({ to, label, Icon }) => (
           <NavLink key={to} to={to} end={to === "/app"} className={({ isActive }) => (isActive ? "active" : "")}>
             <Icon size={18} /> {label}{badge(to)}
           </NavLink>
@@ -109,7 +110,7 @@ function ConsoleShell({ me, setMe, ws }: { me: Me | null | undefined; setMe: (m:
       </nav>
       <Sheet open={more} onClose={() => setMore(false)} title="More">
         <nav className="mmenu-items" aria-label="More" style={{ paddingTop: 0 }}>
-          {NAV.filter((n) => !("tab" in n) && ((n.to === "/app/reviews" ? (ws ? ws.tenant.id : tenant?.id) === "diamondz" && (me?.role === "owner" || me?.role === "admin" || !me?.account) : !["/app/team", "/app/security", "/app/clients"].includes(n.to) || ws))).map(({ to, label, Icon }) => <NavLink key={to} to={to}><Icon />{label}{badge(to)}</NavLink>)}
+          {NAV.filter((n) => !("tab" in n) && (((n.to === "/app/reviews" || n.to === "/app/signing") ? (ws ? ws.tenant.id : tenant?.id) === "diamondz" && (me?.role === "owner" || me?.role === "admin" || !me?.account) : !["/app/team", "/app/security", "/app/clients"].includes(n.to) || ws))).map(({ to, label, Icon }) => <NavLink key={to} to={to}><Icon />{label}{badge(to)}</NavLink>)}
           <a onClick={() => api.signOut().finally(() => setMe(null))} style={{ cursor: "pointer" }}><LogoutIcon />Sign out</a>
         </nav>
         {ws ? <WorkspaceBox ws={ws} /> : (<><span className="muted" style={{ fontSize: 12 }}>Wallet</span><Connect chainId={DEFAULT_CHAIN_ID} /></>)}

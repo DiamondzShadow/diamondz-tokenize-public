@@ -86,7 +86,10 @@ function CountUp({ to, format }: { to: number; format: (n: number) => string }) 
   return <span ref={ref}>{format(v)}</span>;
 }
 
-/** Picks the offering to feature: a verified one first, else any listed one. */
+/** The platform site's demo offering (ICE PRINCE, a film series on Arbitrum Sepolia). Featured whenever it is listed on this site. */
+const DEMO_OFFERING_ID = "ast_5c1f31ec4071745e";
+
+/** Picks the offering to feature: the demo offering if listed, else a verified one, else any listed one. */
 function useFeatured() {
   const [list, setList] = useState<MarketAsset[] | null>(null);
   useEffect(() => {
@@ -103,6 +106,8 @@ function useFeatured() {
   }, [list]);
   const featured = useMemo(() => {
     if (!list?.length) return null;
+    const demo = list.find((a) => a.id === DEMO_OFFERING_ID);
+    if (demo) return demo;
     return list.find((a) => verified[a.id] && a.imageUrl) ?? list.find((a) => verified[a.id]) ?? list.find((a) => a.imageUrl) ?? list[0];
   }, [list, verified]);
   return { list, featured };
@@ -117,6 +122,14 @@ const STATUS_TEXT: Record<string, [string, string]> = {
   "verifier-removed": ["warn", "Verifier removed"],
 };
 
+/** Sale status text: a sale window that hasn't started says when it opens, before any check-based status. */
+function saleText(asset: MarketAsset, proof: Proof, open: string, paused: string): [string, string] {
+  const start = asset.rules?.saleStartsAt ? new Date(`${asset.rules.saleStartsAt}T00:00:00`) : null;
+  if (start && !isNaN(start.getTime()) && start.getTime() > Date.now())
+    return ["warn", `Opens ${start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`];
+  return proof.verified || !proof.gated ? ["ok", open] : ["warn", paused];
+}
+
 function HeroPanel({ asset, proof }: { asset: MarketAsset | null | undefined; proof: Proof | null }) {
   if (asset === undefined) return <div className="hp hp-skel" aria-hidden="true" />;
   if (!asset)
@@ -129,7 +142,6 @@ function HeroPanel({ asset, proof }: { asset: MarketAsset | null | undefined; pr
     );
   const net = networkById(asset.chainId);
   const cls = assetClassById(asset.assetClass);
-  const saleOpen = proof ? proof.verified || !proof.gated : null;
   return (
     <Link to={`/market/${asset.id}`} className="hp" aria-label={`${asset.name}, view offering`}>
       <div className="hp-img">
@@ -160,12 +172,15 @@ function HeroPanel({ asset, proof }: { asset: MarketAsset | null | undefined; pr
               </li>
             );
           })}
-          {proof && (
-            <li className="hp-sale" style={{ animationDelay: `${300 + proof.checks.length * 140}ms` }}>
-              <span>Sale</span>
-              <span className={`status ${saleOpen ? "ok" : "warn"}`}>{saleOpen ? "Open" : "Paused until checks pass"}</span>
-            </li>
-          )}
+          {proof && (() => {
+            const [k, t] = saleText(asset, proof, "Open", "Paused until checks pass");
+            return (
+              <li className="hp-sale" style={{ animationDelay: `${300 + proof.checks.length * 140}ms` }}>
+                <span>Sale</span>
+                <span className={`status ${k}`}>{t}</span>
+              </li>
+            );
+          })()}
         </ul>
       </div>
     </Link>
@@ -374,7 +389,7 @@ export default function Landing() {
                   </div>
                 );
               })}
-              <div className="kv"><span>Sale</span><span>{proof.verified || !proof.gated ? "Open while all checks are current" : "Paused until every check passes"}</span></div>
+              <div className="kv"><span>Sale</span><span>{saleText(featured, proof, "Open while all checks are current", "Paused until every check passes")[1]}</span></div>
               <Link to={`/market/${featured.id}`} className="btn link" style={{ marginTop: 12 }}>See the evidence →</Link>
             </div>
           ) : (
@@ -394,7 +409,9 @@ export default function Landing() {
         {live > 0 && (
           <div className="mini-stats">
             <div><b><CountUp to={live} format={(n) => Math.round(n).toString()} /></b><span>listed offerings</span></div>
-            <div><b><CountUp to={proof?.checks.filter((c) => c.status === "current").length ?? 0} format={(n) => Math.round(n).toString()} /></b><span>current checks on {featured?.name}</span></div>
+            {(proof?.checks.filter((c) => c.status === "current").length ?? 0) > 0 && (
+              <div><b><CountUp to={proof!.checks.filter((c) => c.status === "current").length} format={(n) => Math.round(n).toString()} /></b><span>current checks on {featured?.name}</span></div>
+            )}
             {verifiedCount > 0 && <div><b>Live</b><span>read from chain every minute</span></div>}
           </div>
         )}

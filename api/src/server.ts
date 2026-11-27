@@ -29,6 +29,7 @@ import { collectEvidence } from "./evidence";
 import { mfaGate, mountMfa } from "./mfa";
 import { mountClients } from "./clients";
 import { mountLegal } from "./legal";
+import { mountEsign } from "./esign";
 import { mountCsp } from "./csp";
 import { mountApprovals } from "./approvals";
 import { MongoStore, SqliteStore, type Role, type Store, type TenantRow, type LeadRow } from "./store";
@@ -1373,6 +1374,21 @@ const legal = mountLegal(app, {
   origin: (c) => `https://${hostOf(c)}`,
   tooMany,
 });
+// ------------------------------------------------------------------ signed checks through Adobe Acrobat Sign (E1–E7)
+mountEsign(app, {
+  store,
+  requireAdmin,
+  isPlatformAdmin: (c) => (c as Context<Env>).get("tenant").id === DEFAULT_TENANT && ["owner", "admin"].includes((c as Context<Env>).get("member").role),
+  member: (c) => (c as Context<Env>).get("member"),
+  adminAsset: adminAssetOf,
+  anyAsset: async (id) => { const r = (await store.allAssets()).find((x) => x.id === id); return r ? rowToAsset(r) : null; },
+  listedAsset: async (c, id) => (await siteListed(c)).find((a: any) => a.id === id) ?? null,
+  tenantName: async (id) => { const t = await store.getTenant(id); return t ? (JSON.parse(t.config) as TenantConfig).name : "Issuer"; },
+  origin: (c) => `https://${hostOf(c)}`,
+  tooMany,
+  legal: { sync: (id, ev) => legal.adobeSync(id, ev), open: () => legal.adobeOpen() },
+});
+
 // Public: is the offering's issuer a verified company (Stripe business verification)? Name as Stripe has it.
 app.get("/market/:id/issuer", async (c) => {
   const a = (await siteListed(c)).find((x: any) => x.id === c.req.param("id"));
@@ -1560,5 +1576,6 @@ app.onError((err, c) => {
   return c.json({ error: "Server error" }, 500);
 });
 
-export default { port: PORT, hostname: "127.0.0.1", fetch: app.fetch };
+// idleTimeout (seconds, Bun default 10): reads that scan chain history can take longer than 10s; Cloudflare waits 100s.
+export default { port: PORT, hostname: "127.0.0.1", fetch: app.fetch, idleTimeout: 100 };
 console.log(`[api] listening on 127.0.0.1:${PORT}, store=${store.kind === "mongo" ? `mongo (${process.env.MONGO_DB ?? "tokenize"})` : DB_PATH}`);

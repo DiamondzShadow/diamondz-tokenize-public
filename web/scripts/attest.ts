@@ -1,4 +1,4 @@
-// Sign a proof-of-asset check as one of the TEST verifiers (Base Sepolia only). READ-ONLY unless --execute.
+// Sign a proof-of-asset check as one of the TEST verifiers (test networks only; --chain <id>, default 84532 Base Sepolia). READ-ONLY unless --execute.
 // Does exactly what a real verifier does: uploads the evidence file (signed by the verifier wallet) to the API,
 // then calls AssetOracle.attest from the verifier's own wallet.
 //
@@ -39,7 +39,8 @@ const env = Object.fromEntries(
   readFileSync(`${homedir()}/.diamondz-tokenize-test-verifiers.env`, "utf8").split("\n").filter(Boolean).map((l) => l.split("=") as [string, string]),
 );
 const acct = privateKeyToAccount(env[`TEST_VERIFIER_${role}_KEY`] as Hex);
-const net = networkById(84532)!;
+const net = networkById(Number(opt("chain") ?? 84532))!;
+if (!net?.testnet || !net.assetOracle) throw new Error("--chain must be a test network with an asset oracle");
 const oracle = net.assetOracle!.address;
 // Same RPC as the API: RPC_<chainId> override → Uniblock (UNIBLOCK_API_KEY) → public.
 const rpc = rpcUrl(net);
@@ -50,7 +51,7 @@ const A = (artifacts as any).AssetOracle;
 // Evidence: a file, or a text note turned into a small text document.
 const file = opt("file");
 const bytes = file ? new Uint8Array(readFileSync(file)) : new TextEncoder().encode(
-  `${CHECK_KINDS[kind].name} — ${result.toUpperCase()}\nToken: ${getAddress(token)}\nVerifier: ${acct.address}\nDate: ${new Date().toISOString()}\n\n${opt("note") ?? "TEST attestation on Base Sepolia (testnet only)."}\n`,
+  `${CHECK_KINDS[kind].name} — ${result.toUpperCase()}\nToken: ${getAddress(token)}\nVerifier: ${acct.address}\nDate: ${new Date().toISOString()}\n\n${opt("note") ?? "TEST attestation on ${net.name} (testnet only)."}\n`,
 );
 const type = file?.endsWith(".pdf") ? "application/pdf" : file?.endsWith(".png") ? "image/png" : file?.match(/\.jpe?g$/) ? "image/jpeg" : "text/plain";
 
@@ -66,10 +67,10 @@ if (!active || !allowed) throw new Error("This test verifier isn't approved for 
 // 1. upload evidence, signed by the verifier wallet
 const sha = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 const ts = Math.floor(Date.now() / 1000);
-const signature = await acct.signMessage({ message: `Diamondz Tokenize evidence upload\nsha256: ${sha}\nnetwork: 84532\ntime: ${ts}` });
+const signature = await acct.signMessage({ message: `Diamondz Tokenize evidence upload\nsha256: ${sha}\nnetwork: ${net.id}\ntime: ${ts}` });
 const form = new FormData();
 form.set("file", new File([bytes], file ?? "evidence.txt", { type }));
-for (const [k, v] of Object.entries({ chainId: "84532", verifier: acct.address, ts: String(ts), signature })) form.set(k, v);
+for (const [k, v] of Object.entries({ chainId: String(net.id), verifier: acct.address, ts: String(ts), signature })) form.set(k, v);
 const up = await fetch(`${API}/proof/evidence`, { method: "POST", body: form });
 const ev = (await up.json()) as any;
 if (!up.ok) throw new Error(`evidence upload failed: ${ev.error}`);

@@ -2,7 +2,7 @@
 // Data: GET /api/proof/:assetId (refreshed server-side every ~2 minutes; we poll every 60s while the page is open).
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
-import { api, type Proof, type ProofCheck, type ProofFeed } from "./api";
+import { api, type EsignPublicCheck, type Proof, type ProofCheck, type ProofFeed } from "./api";
 import { addrUrl, networkById, txUrl } from "./chains";
 import { CLASS_CHECKS } from "./verification";
 import type { AssetClassId } from "./catalog";
@@ -148,7 +148,20 @@ export function ProofBadge({ proof, assetClass }: { proof: Proof | null; assetCl
   return <span className={`vb ${state}`}>{ICON[state]} {label}</span>;
 }
 
+/** Checks signed through Adobe Acrobat Sign for a listed offering (who signed, the letter and audit report). */
+function useEsignChecks(assetId: string | undefined) {
+  const [list, setList] = useState<EsignPublicCheck[]>([]);
+  useEffect(() => {
+    if (!assetId) return;
+    let live = true;
+    api.marketEsign(assetId).then((r) => live && setList(r.checks), () => live && setList([]));
+    return () => void (live = false);
+  }, [assetId]);
+  return list;
+}
+
 export function ProofPanel({ proof, assetClass, className }: { proof: Proof | null; assetClass: AssetClassId; className?: string }) {
+  const esign = useEsignChecks(proof?.assetId);
   if (!proof) return <div className={`panel ${className ?? ""}`} id="proof"><h3 style={{ fontSize: 20 }}>Proof of asset</h3><span className="muted">Reading the chain…</span></div>;
   const net = networkById(proof.chainId);
   const state = proofState(proof);
@@ -175,13 +188,24 @@ export function ProofPanel({ proof, assetClass, className }: { proof: Proof | nu
               const s = STATUS[c.status];
               const days = daysLeft(c.validUntil);
               const val = checkValue(c);
+              // An Adobe-signed letter only counts for this check when its fingerprint is the one recorded on chain.
+              const es = esign.find((e) => e.kind === c.kind && !!e.evidenceHash && !!c.evidenceHash && e.evidenceHash.toLowerCase() === c.evidenceHash.toLowerCase());
               return (
                 <div className="chk" key={c.kind}>
                   <div className={`ci ${s.cls}`}>{s.icon}</div>
                   <div style={{ minWidth: 0 }}>
                     <b>{c.name}</b>
                     <p>{c.confirms}{val ? ` Value: ${val}.` : ""}</p>
-                    {c.verifier
+                    {es ? (
+                      <>
+                        <div className="who es-who">Signed by <b>{es.signerName}, {es.firmName}</b> in Adobe Acrobat Sign · identity confirmed by {es.idMethod === "GOV_ID" ? "government ID" : "phone code"}</div>
+                        <div className="es-match">
+                          <span>✓ The signed letter and audit report match the fingerprint recorded on chain.</span>
+                          <a className="lnk" href={es.letter} target="_blank" rel="noreferrer">Signed letter (PDF)</a>
+                          <a className="lnk" href={es.audit} target="_blank" rel="noreferrer">Audit report (PDF)</a>
+                        </div>
+                      </>
+                    ) : c.verifier
                       ? <div className="who">Signed by <em>{c.verifier.name}</em> <a className="addr" href={net ? addrUrl(net, c.verifier.address) : undefined} target="_blank" rel="noreferrer">{c.verifier.address}</a></div>
                       : <div className="who muted">No approved verifier has signed this yet</div>}
                   </div>
@@ -191,7 +215,7 @@ export function ProofPanel({ proof, assetClass, className }: { proof: Proof | nu
                     {c.validUntil && (
                       <span>{c.status === "failed" ? `Stands until ${fmtDate(c.validUntil)}` : days < 0 ? `Expired ${fmtDate(c.validUntil)}` : days <= 14 ? `Expires in ${days} day${days === 1 ? "" : "s"}` : `Valid until ${fmtDate(c.validUntil)}`}</span>
                     )}
-                    {isHttp(c.evidenceURI) && <a className="lnk" href={c.evidenceURI} target="_blank" rel="noreferrer">Evidence ↗</a>}
+                    {!es && isHttp(c.evidenceURI) && <a className="lnk" href={c.evidenceURI} target="_blank" rel="noreferrer">Evidence ↗</a>}
                     {c.tx && net && <a className="lnk" href={txUrl(net, c.tx)} target="_blank" rel="noreferrer">Transaction ↗</a>}
                   </div>
                 </div>

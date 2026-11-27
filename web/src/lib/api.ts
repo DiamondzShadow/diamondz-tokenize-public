@@ -92,19 +92,23 @@ export interface ClientProposal { id: string; clientId: string; assetId: string;
 export interface CompanyCheck { status: "not started" | "started" | "in review" | "verified"; name: string | null; due?: number }
 export interface LegalState {
   company: CompanyCheck; emailOn: boolean; stage: "none" | "invited" | "opened" | "comments" | "signed" | "changed" | "returned" | "approved"; cleared: boolean; reasons: string[];
-  counsel: { name: string; firm: string; email: string; barState: string; barNumber: string; invitedAt: string; openedAt: string | null; signedAt: string | null; comments: { at: string; text: string } | null } | null;
+  counsel: { name: string; firm: string; email: string; barState: string; barNumber: string; invitedAt: string; openedAt: string | null; signedAt: string | null; comments: { at: string; text: string } | null; via?: "adobe" | "typed" | null } | null;
+  /** Sign-off out in Adobe Acrobat Sign (design E6). `current` = sent for today's terms. */
+  adobe?: { status: "out" | "signed" | "declined" | "expired" | "canceled"; sentAt: string; identityAt: string | null; signedAt: string | null; current: boolean } | null;
+  adobeConnected?: boolean;
   review: { decision: "approved" | "returned"; at: string; note: string } | null;
 }
 export interface CounselView {
   needsCode: boolean; email?: string; issuer: string; company?: CompanyCheck;
   counsel?: { name: string; firm: string; email: string; barState: string; barNumber: string };
-  letter?: { sha256: string; bytes: number; at: string } | null; signed?: { at: string; name: string } | null;
+  letter?: { sha256: string; bytes: number; at: string } | null; signed?: { at: string; name: string; via?: "adobe" | "typed" } | null;
+  adobe?: { connected: boolean; waiting: boolean; sentAt: string | null };
   offering?: { id: string; name: string; symbol: string; chainId: number; standard: string; exemption: string | null; totalSupply: string; pricePerToken: string; minInvestment: string; lockup: string; rules: Record<string, unknown> | null; documents: { kind: string; name: string; url: string | null; sha256: string }[] };
 }
 export interface PlatformReview {
   assetId: string; name: string; issuer: string; chainId: number; exemption: string | null; stage: string; company: CompanyCheck;
   counsel: { name: string; firm: string; email: string; barState: string; barNumber: string }; signed: { at: string; name: string; barState: string; barNumber: string };
-  letter: { sha256: string; bytes: number } | null; emailDomainOk: boolean; termsMatch: boolean; review: { decision: string; by: string; at: string; note: string } | null;
+  letter: { sha256: string; bytes: number } | null; adobe?: { signedAt: string | null; signoff: string; audit: string } | null; emailDomainOk: boolean; termsMatch: boolean; review: { decision: string; by: string; at: string; note: string } | null;
 }
 export interface ApprovalAudit {
   covered: boolean; total: number; checked: number; manual: number; testnet: boolean; note?: string | null;
@@ -230,6 +234,21 @@ export interface AccountState { account: { address: string; email: string | null
 export interface PlanRequest { plan: string; annual: boolean; at: string }
 export interface MessageSettings { notifyEmails: string[]; emailConfigured: boolean; platformFallback?: boolean }
 
+/** A signed check sent through Adobe Acrobat Sign (api/src/esign.ts; designs E1–E7). */
+export type EsignStatus = "sent" | "opened" | "identity" | "signed" | "recorded" | "declined" | "expired" | "canceled";
+export interface EsignRequest {
+  id: string; assetId: string; kind: string; kindName: string; firmName: string; signerName: string; signerEmail: string;
+  idMethod: "GOV_ID" | "PHONE"; status: EsignStatus; sentAt: string; openedAt: string | null; identityAt: string | null; signedAt: string | null;
+  recordedAt: string | null; closedAt: string | null; expiresAt: string; tx: string | null; recordError: string | null; declineReason: string | null;
+  chainId: number; hasFiles: boolean; offering?: string;
+}
+export interface EsignFirm { id: string; name: string; domain: string; kinds: string[] }
+export interface EsignIssuer { configured: boolean; deployed: boolean; kinds: { id: string; name: string; confirms: string }[]; firms: EsignFirm[]; requests: EsignRequest[] }
+export interface EsignPublicCheck { kind: string; signerName: string; firmName: string; idMethod: "GOV_ID" | "PHONE"; signedAt: string; recordedAt: string | null; tx: string | null; evidenceHash: string | null; letter: string; audit: string; evidence: string }
+export interface EsignSignerView { offering: string; assetClass: string; issuer: string; network: string; testnet: boolean; kindName: string; confirms: string; firmName: string; signerName: string; idMethod: "GOV_ID" | "PHONE"; status: EsignStatus; expiresAt: string; note: string; signedAt: string | null }
+export interface EsignPlatform { configured: boolean; webhook: { url: string; id: string | null; at: string } | null; attester: string | null; firms: (EsignFirm & { addedBy: string })[]; requests: EsignRequest[]; kinds: { id: string; name: string }[] }
+export interface EsignSendBody { kind: string; firmId: string; signerName: string; signerEmail: string; idMethod: "GOV_ID" | "PHONE"; phone?: { countryCode: string; phone: string }; note: string }
+
 export const api = {
   // ---- Stellar edition
   stellarDeploy: (id: string, issuer: string) => req<Asset>(`/assets/${id}/stellar/deploy`, { method: "POST", body: JSON.stringify({ issuer }) }),
@@ -332,9 +351,25 @@ export const api = {
     if (!res.ok) throw new Error(j?.error ?? `Upload failed (${res.status})`);
     return j as { ok: true; sha256: string };
   },
-  counselSign: (t: string, b: { barState: string; barNumber: string; statements: [true, true, true]; name: string }) => req<{ ok: true; signedAt: string }>(`/counsel/${encodeURIComponent(t)}/sign`, { method: "POST", body: JSON.stringify(b) }),
+  counselAdobe: (t: string) => req<{ url: string }>(`/counsel/${encodeURIComponent(t)}/adobe`, { method: "POST" }),
+  legalRemind: (assetId: string) => req<{ ok: true }>(`/assets/${assetId}/legal/remind`, { method: "POST" }),
+  counselSign: (t: string, b: { barState: string; barNumber: string; statements: [true, true, true]; name: string }) => req<{ ok: true; signedAt?: string; adobe?: boolean; url?: string | null }>(`/counsel/${encodeURIComponent(t)}/sign`, { method: "POST", body: JSON.stringify(b) }),
   counselComments: (t: string, text: string) => req<{ ok: true }>(`/counsel/${encodeURIComponent(t)}/comments`, { method: "POST", body: JSON.stringify({ text }) }),
   reviews: () => req<{ reviews: PlatformReview[] }>("/platform/reviews"),
+  // ---- signed checks through Adobe Acrobat Sign
+  esign: (id: string) => req<EsignIssuer>(`/assets/${id}/esign`),
+  esignSend: (id: string, b: EsignSendBody) => req<{ request: EsignRequest }>(`/assets/${id}/esign`, { method: "POST", body: JSON.stringify(b) }),
+  esignRemind: (id: string, rid: string) => req<{ request: EsignRequest }>(`/assets/${id}/esign/${rid}/remind`, { method: "POST" }),
+  esignCancel: (id: string, rid: string) => req<{ request: EsignRequest }>(`/assets/${id}/esign/${rid}/cancel`, { method: "POST" }),
+  marketEsign: (id: string) => req<{ checks: EsignPublicCheck[] }>(`/market/${id}/esign`),
+  signRequest: (token: string) => req<EsignSignerView>(`/esign/sign/${token}`),
+  signUrl: (token: string) => req<{ url: string }>(`/esign/sign/${token}/url`, { method: "POST" }),
+  signDecline: (token: string, reason: string) => req<{ ok: true }>(`/esign/sign/${token}/decline`, { method: "POST", body: JSON.stringify({ reason }) }),
+  platformEsign: () => req<EsignPlatform>("/platform/esign"),
+  esignSetup: () => req<{ webhook: { url: string; id: string | null; at: string } }>("/platform/esign/setup", { method: "POST" }),
+  esignAddFirm: (b: { name: string; domain: string; kinds: string[] }) => req<{ firm: EsignFirm }>("/platform/esign/firms", { method: "POST", body: JSON.stringify(b) }),
+  esignRemoveFirm: (fid: string) => req<{ ok: true }>(`/platform/esign/firms/${fid}`, { method: "DELETE" }),
+  esignRecord: (rid: string) => req<{ request: EsignRequest }>(`/platform/esign/${rid}/record`, { method: "POST" }),
   decideReview: (assetId: string, b: { decision: "approve" | "return"; licenseFound: boolean; note: string }) => req<{ ok: true }>(`/platform/reviews/${assetId}`, { method: "POST", body: JSON.stringify(b) }),
   // ---- client accounts for advisors (design 4)
   clients: () => req<{ clients: AdvisorClient[]; offerings: { id: string; name: string; issuer: string; pricePerToken: string; minInvestment: string; exemption: string | null }[] }>("/clients"),

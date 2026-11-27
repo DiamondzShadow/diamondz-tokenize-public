@@ -7,10 +7,15 @@
 //   - confirmed history is cached; the last CONFIRMATIONS blocks are re-read fresh (reorg-safe);
 //   - at most one refresh per contract every REFRESH_MS; concurrent callers share it;
 //   - every eth_getLogs goes through one global queue with a minimum gap and 429 back-off.
-// In memory: a restart rescans each contract once (a year of Arbitrum ≈ 3k calls ≈ 280k CU ≈ 0.7% of a month).
+// Persisted: confirmed history (never the unconfirmed tail) is saved to LOG_INDEX_FILE after each scan that moved
+// forward, and loaded at startup, so a restart only reads the blocks since the last save instead of every
+// contract's whole history (a cold rescan took ~15-20 min and left proof pages stale meanwhile).
 //
-// Env: LOG_CHUNK_BLOCKS (default 50000), LOG_MIN_GAP_MS (default 150), LOG_REFRESH_MS (default 3000: a refresh only reads the newest blocks).
+// Env: LOG_CHUNK_BLOCKS (default 50000), LOG_MIN_GAP_MS (default 150), LOG_REFRESH_MS (default 3000: a refresh only reads the newest blocks),
+//      LOG_INDEX_FILE (default: logindex.json next to DB_PATH, else api/data/).
 import { decodeEventLog, getAddress, type AbiEvent, type Address, type Hex, type PublicClient } from "viem";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 const CHUNK = BigInt(process.env.LOG_CHUNK_BLOCKS ?? 50_000);
 const MIN_GAP_MS = Number(process.env.LOG_MIN_GAP_MS ?? 150);
@@ -21,6 +26,51 @@ export interface RawLog { address: Address; topics: Hex[]; data: Hex; blockNumbe
 interface Entry { from: bigint; cursor: bigint; logs: RawLog[]; tail: RawLog[]; at: number; pending: Promise<void> | null }
 
 const index = new Map<string, Entry>();
+
+// ---- persistence (confirmed history only; the tail is always re-read)
+// Next to the store's DB_PATH by default, so test runs (which point DB_PATH at a temp dir) never touch production's file.
+const INDEX_FILE = process.env.LOG_INDEX_FILE ?? `${process.env.DB_PATH ? dirname(process.env.DB_PATH) : `${import.meta.dir}/../data`}/logindex.json`;
+const SAVE_DELAY_MS = 5_000;
+type SavedLog = [Address, Hex[], Hex, string, Hex, number];
+interface Saved { v: 1; entries: Record<string, { from: string; cursor: string; logs: SavedLog[] }> }
+
+function load() {
+  try {
+    const d = JSON.parse(readFileSync(INDEX_FILE, "utf8")) as Saved;
+    if (d?.v !== 1) return;
+    for (const [k, e] of Object.entries(d.entries)) {
+      index.set(k, {
+        from: BigInt(e.from), cursor: BigInt(e.cursor), tail: [], at: 0, pending: null,
+        logs: e.logs.map(([address, topics, data, bn, transactionHash, logIndex]) => ({ address, topics, data, blockNumber: BigInt(bn), transactionHash, logIndex })),
+      });
+    }
+    console.log(`[logindex] loaded ${index.size} contract streams from ${INDEX_FILE}`);
+  } catch (e: any) {
+    if (e?.code !== "ENOENT") console.error("[logindex] couldn't load saved index, rescanning:", e?.message ?? e);
+  }
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    try {
+      const entries: Saved["entries"] = {};
+      for (const [k, e] of index) {
+        if (e.cursor < e.from) continue; // nothing confirmed yet
+        entries[k] = { from: e.from.toString(), cursor: e.cursor.toString(), logs: e.logs.map((l) => [l.address, l.topics, l.data, l.blockNumber.toString(), l.transactionHash, l.logIndex]) };
+      }
+      mkdirSync(dirname(INDEX_FILE), { recursive: true });
+      const tmp = `${INDEX_FILE}.tmp`;
+      writeFileSync(tmp, JSON.stringify({ v: 1, entries } satisfies Saved));
+      renameSync(tmp, INDEX_FILE); // atomic: a crash mid-write never leaves a half file
+    } catch (e: any) {
+      console.error("[logindex] save failed:", e?.message ?? e);
+    }
+  }, SAVE_DELAY_MS);
+}
+if (!process.env.LOG_INDEX_NO_PERSIST) load();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let gate: Promise<unknown> = Promise.resolve();
 export const stats = { calls: 0, retries: 0 };
@@ -91,6 +141,7 @@ export async function contractLogs(pc: PublicClient, chainId: number, address: A
           const got = await fetchRange(pc, address, entry.cursor + 1n, safe);
           entry.logs.push(...got);
           entry.cursor = safe;
+          if (!process.env.LOG_INDEX_NO_PERSIST) scheduleSave();
         }
         entry.tail = head > entry.cursor ? await fetchRange(pc, address, entry.cursor + 1n, head) : [];
         entry.at = Date.now();

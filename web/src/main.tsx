@@ -34,6 +34,8 @@ import Clients from "./app/Clients";
 import ClientPortal from "./pages/ClientPortal";
 import Reviews from "./app/Reviews";
 import Counsel from "./pages/Counsel";
+import SignRequest from "./pages/SignRequest";
+import Signing from "./app/Signing";
 import EntityInvest from "./pages/EntityInvest";
 import UseCasePage, { UseCasesIndex } from "./pages/UseCases";
 import Accredit from "./pages/Accredit";
@@ -71,6 +73,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/start/join" element={<StartJoin />} />
           <Route path="/client/:token" element={<ClientPortal />} />
           <Route path="/counsel/:token" element={<Counsel />} />
+          <Route path="/sign/:token" element={<SignRequest />} />
           <Route path="/app" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="new" element={<NewIssuance />} />
@@ -79,6 +82,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="security" element={<SecurityPage />} />
             <Route path="clients" element={<Clients />} />
             <Route path="reviews" element={<Reviews />} />
+            <Route path="signing" element={<Signing />} />
             <Route path="payments" element={<Payments />} />
             <Route path="payouts" element={<PayoutsPage />} />
             <Route path="investors" element={<InvestorsPage />} />

@@ -52,6 +52,7 @@ export default function Reviews() {
                   </span>
                 </div>
                 <div className="li"><span><b>Opinion letter</b><br /><span className="muted" style={{ fontSize: 13 }}>Signed {new Date(r.signed.at).toLocaleString()}{r.letter ? ` · ${(r.letter.bytes / 1024).toFixed(0)} KB` : ""}</span></span>{r.letter ? <a href={`/api/platform/reviews/${r.assetId}/letter`} target="_blank" rel="noreferrer">Open letter ↗</a> : <span className="tag y">Missing</span>}</div>
+                {r.adobe && <div className="li"><span><b>Signed in Adobe Acrobat Sign</b><br /><span className="muted" style={{ fontSize: 13 }}>Government ID checked by Adobe{r.adobe.signedAt ? ` · ${new Date(r.adobe.signedAt).toLocaleString()}` : ""}</span></span><span className="row" style={{ gap: 12 }}><a href={r.adobe.signoff} target="_blank" rel="noreferrer">Sign-off ↗</a><a href={r.adobe.audit} target="_blank" rel="noreferrer">Audit report ↗</a></span></div>}
                 <div className="li"><span><b>Offering matches the letter</b><br /><span className="muted" style={{ fontSize: 13 }}>Terms unchanged since the lawyer signed</span></span>{ok(r.termsMatch, "Passed", "Changed")}</div>
                 {r.review && <div className={`notice ${r.review.decision === "approved" ? "ok" : ""}`}>{r.review.decision === "approved" ? "Approved" : "Sent back"} by {r.review.by} on {new Date(r.review.at).toLocaleString()}{r.review.note ? `: “${r.review.note}”` : ""}</div>}
                 {r.stage === "signed" && <>

@@ -58,6 +58,8 @@ JOBS: dict[str, tuple[timedelta, timedelta]] = {
     "stellar-sale-proof": (timedelta(minutes=10), timedelta(minutes=8)),
     # Security evidence for assessors: dependency scan + audit-log export into ~/tokenize-evidence (api/src/evidence.ts).
     "security-evidence": (timedelta(days=30), timedelta(minutes=10)),
+    # Adobe Acrobat Sign: catch any signed / expired agreement whose webhook was missed (api/src/esign.ts).
+    "esign-poll": (timedelta(minutes=10), timedelta(minutes=8)),
 }
 
 

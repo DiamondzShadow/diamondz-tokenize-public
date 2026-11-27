@@ -20,6 +20,9 @@ import { mkdirSync } from "node:fs";
 import { z } from "zod";
 import type { Store } from "./store";
 import { emailConfigured, escHtml, sendEmail } from "./notify";
+import { AdobeError, adobeConfigured, agreementStatus, auditPdf, cancelAgreement, createAgreement, isClosedUnsigned, isSigned, remind, signedPdf, signingUrl, uploadPdf } from "./adobesign";
+import { letterPdf } from "./pdf";
+import { networkById, stellarById } from "../../web/src/lib/chains";
 
 const sha = (s: string | Uint8Array) => createHash("sha256").update(s).digest("hex");
 const EVIDENCE_DIR = process.env.EVIDENCE_DIR ?? `${import.meta.dir}/../data/evidence`;
@@ -39,7 +42,13 @@ interface Legal {
   tokenHash: string; invitedAt: string; invitedBy: string; expiresAt: string;
   openedAt?: string; code?: { hash: string; at: number; tries: number }; sessions?: string[];
   letter?: { sha256: string; bytes: number; at: string };
-  signed?: { at: string; name: string; barState: string; barNumber: string; terms: string; ip: string | null };
+  signed?: { at: string; name: string; barState: string; barNumber: string; terms: string; ip: string | null; via?: "adobe" | "typed" };
+  /** Sign-off sent through Adobe Acrobat Sign (design E6): the lawyer confirms identity by government ID and signs there. */
+  adobe?: {
+    agreementId: string; sentAt: string; status: "out" | "signed" | "declined" | "expired" | "canceled";
+    identityAt?: string; signedAt?: string; signedSha?: string; auditSha?: string; lastReminderAt?: string;
+    pending: { name: string; barState: string; barNumber: string; terms: string; letterSha: string };
+  };
   comments?: { at: string; text: string };
   review?: { decision: "approved" | "returned"; by: string; at: string; licenseFound: boolean; note: string; terms: string };
 }
@@ -75,6 +84,34 @@ export function companyStatus(acct: any) {
   const due = [...(acct.requirements?.currently_due ?? []), ...(acct.requirements?.past_due ?? [])];
   const verified = !!acct.details_submitted && !acct.requirements?.disabled_reason && due.length === 0 && acct.capabilities?.transfers === "active";
   return { status: verified ? ("verified" as const) : acct.details_submitted ? ("in review" as const) : ("started" as const), name: acct.company?.name ?? acct.business_profile?.name ?? null, due: due.length };
+}
+
+/** The three statements the lawyer confirms (same words on the page and in the Adobe sign-off letter). */
+export const counselStatements = (barState: string) => [
+  `I'm licensed to practice law in ${barState} and I'm in good standing.`,
+  "I've reviewed the offering's terms, documents and the transfer rules listed here.",
+  "In my opinion the offering may proceed under the exemption shown, as described in my letter.",
+];
+const EXEMPTION: Record<string, string> = { "506c": "Rule 506(c)", regs: "Regulation S", unsure: "Not decided yet" };
+
+/** The sign-off letter sent to Adobe: the exact terms reviewed, the opinion letter's fingerprint, the three statements. */
+export function counselSignoffPdf(a: any, issuer: string, p: { name: string; firm: string; barState: string; barNumber: string; terms: string; letterSha: string }) {
+  const net = networkById(a.chainId)?.name ?? stellarById(a.chainId)?.name ?? `Network ${a.chainId}`;
+  const docs = ((a.documents ?? []) as { kind: string; name?: string; sha256: string }[]).map((d) => `${d.name ?? d.kind}: sha256 ${d.sha256}`);
+  return letterPdf([
+    { text: "Securities counsel sign-off", bold: true, size: 17, gapBefore: 0 },
+    { text: `Requested through Diamondz Tokenize by ${issuer}`, size: 10 },
+    { text: "The offering as reviewed", bold: true, size: 12, gapBefore: 18 },
+    { text: `${a.name} (${a.symbol}) on ${net}, ${a.standard}\nExemption: ${EXEMPTION[a.exemption ?? ""] ?? "Not set"}\nRaise: ${Number(a.totalSupply).toLocaleString("en-US")} tokens at $${a.pricePerToken}${Number(a.minInvestment) ? `, $${Number(a.minInvestment).toLocaleString("en-US")} minimum` : ""}${a.lockup ? `\nLockup: ${a.lockup}` : ""}` },
+    { text: docs.length ? `Documents on file:\n${docs.join("\n")}` : "Documents on file: none", size: 9, gapBefore: 8 },
+    { text: `Terms fingerprint: ${p.terms}\nMy opinion letter (uploaded to Diamondz): sha256 ${p.letterSha}`, size: 9, gapBefore: 8 },
+    { text: "I confirm", bold: true, size: 12, gapBefore: 18 },
+    ...counselStatements(p.barState).map((t, i) => ({ text: `${i + 1}. ${t}`, gapBefore: 6 })),
+    { text: "If any of these terms change, this sign-off no longer applies.", size: 10, gapBefore: 10 },
+    { text: `Counsel: ${p.name}, ${p.firm}\nBar: ${p.barState} ${p.barNumber}`, gapBefore: 18 },
+    { text: "Signature: {{Sig_es_:signer1:signature}}", gapBefore: 22 },
+    { text: "Date: {{Dte_es_:signer1:date}}", gapBefore: 16 },
+  ]);
 }
 
 export function mountLegal(app: Hono<any>, deps: LegalDeps) {
@@ -122,7 +159,9 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     const l = x.legal;
     return c.json({
       company: x.company, emailOn: emailConfigured(), stage: stage(l, x.terms), cleared: x.reasons.length === 0, reasons: x.reasons,
-      counsel: l ? { ...l.counsel, invitedAt: l.invitedAt, openedAt: l.openedAt ?? null, signedAt: l.signed?.at ?? null, comments: l.comments ?? null } : null,
+      counsel: l ? { ...l.counsel, invitedAt: l.invitedAt, openedAt: l.openedAt ?? null, signedAt: l.signed?.at ?? null, comments: l.comments ?? null, via: l.signed?.via ?? (l.adobe ? "adobe" : null) } : null,
+      adobe: l?.adobe ? { status: l.adobe.status, sentAt: l.adobe.sentAt, identityAt: l.adobe.identityAt ?? null, signedAt: l.adobe.signedAt ?? null, current: l.adobe.pending.terms === x.terms } : null,
+      adobeConnected: adobeConfigured(),
       review: l?.review ? { decision: l.review.decision, at: l.review.at, note: l.review.note } : null,
     });
   });
@@ -204,6 +243,7 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     return c.json({
       needsCode: false, issuer: await deps.tenantName(a.tenantId), company,
       counsel: x.l.counsel, letter: x.l.letter ?? null, signed: x.l.signed && x.l.signed.terms === termsHash(a) ? x.l.signed : null,
+      adobe: { connected: adobeConfigured(), waiting: !!x.l.adobe && x.l.adobe.status === "out" && x.l.adobe.pending.terms === termsHash(a), sentAt: x.l.adobe?.sentAt ?? null },
       offering: { id: a.id, name: a.name, symbol: a.symbol, chainId: a.chainId, standard: a.standard, exemption: a.exemption ?? null, totalSupply: a.totalSupply, pricePerToken: a.pricePerToken, minInvestment: a.minInvestment, lockup: a.lockup ?? "", rules: a.rules ?? null, documents: (a.documents ?? []).map((d: any) => ({ kind: d.kind, name: d.name ?? d.kind, url: d.url ?? null, sha256: d.sha256 })) },
     });
   });
@@ -255,9 +295,57 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     if (!b.success) return c.json({ error: "Confirm all three statements, your bar details, and type your full name" }, 400);
     if (!x.l.letter) return c.json({ error: "Upload your signed letter first" }, 400);
     if (b.data.name.toLowerCase().replace(/\s+/g, " ") !== x.l.counsel.name.toLowerCase().replace(/\s+/g, " ")) return c.json({ error: `Type your name exactly as invited: ${x.l.counsel.name}` }, 400);
-    const signed = { at: now(), name: b.data.name, barState: b.data.barState, barNumber: b.data.barNumber, terms: termsHash(x.asset), ip: c.req.header("x-real-ip") ?? null };
+    const terms = termsHash(x.asset);
+    if (adobeConfigured()) {
+      // E6: the sign-off itself happens in Adobe Acrobat Sign (government ID, audit report). Same request again = same agreement.
+      const cur = x.l.adobe;
+      try {
+        if (cur?.status === "out" && cur.pending.terms === terms && cur.pending.letterSha === x.l.letter.sha256 && cur.pending.barNumber === b.data.barNumber && cur.pending.barState === b.data.barState) {
+          return c.json({ ok: true, adobe: true, url: await signingUrl(cur.agreementId).catch(() => null) });
+        }
+        if (cur?.status === "out") await cancelAgreement(cur.agreementId, "Replaced by a newer sign-off request.").catch(() => {});
+        const issuer = await deps.tenantName(x.asset.tenantId);
+        const pending = { name: x.l.counsel.name, barState: b.data.barState, barNumber: b.data.barNumber, terms, letterSha: x.l.letter.sha256 };
+        const pdf = counselSignoffPdf(x.asset, issuer, { ...pending, firm: x.l.counsel.firm });
+        const doc = await uploadPdf(`${x.asset.symbol}-counsel-signoff.pdf`, pdf);
+        const agreementId = await createAgreement({
+          name: `${x.asset.name}: securities counsel sign-off`, message: `${issuer} asks you to sign off on ${x.asset.name}. This is the sign-off you prepared on Diamondz Tokenize.`,
+          transientDocumentId: doc, externalId: `legal:${x.asset.id}`, signer: { email: x.l.counsel.email, idMethod: "GOV_ID" },
+          expiresAt: new Date(Date.now() + 30 * 86_400_000), reminderDays: 3,
+        });
+        await store.setKv(`esign:agr:${agreementId}`, `legal:${x.asset.id}`, now());
+        await putLegal(x.asset.id, x.asset.tenantId, { ...x.l, adobe: { agreementId, sentAt: now(), status: "out", pending }, comments: undefined }, x.d.created_at);
+        return c.json({ ok: true, adobe: true, url: await signingUrl(agreementId).catch(() => null) });
+      } catch (e: any) {
+        console.error("[legal] adobe", x.asset.id, e?.message ?? e);
+        return c.json({ error: e instanceof AdobeError ? e.message : "Couldn't reach Adobe Acrobat Sign. Try again shortly." }, 502);
+      }
+    }
+    const signed = { at: now(), name: b.data.name, barState: b.data.barState, barNumber: b.data.barNumber, terms, ip: c.req.header("x-real-ip") ?? null, via: "typed" as const };
     await putLegal(x.asset.id, x.asset.tenantId, { ...x.l, signed, comments: undefined, review: undefined }, x.d.created_at);
     return c.json({ ok: true, signedAt: signed.at });
+  });
+
+  app.post("/counsel/:token/adobe", async (c) => {
+    const x = await byToken(c.req.param("token") ?? "");
+    if (!x || !hasSession(c, x.l)) return c.json({ error: "Enter the emailed code first" }, 401);
+    if (x.l.adobe?.status !== "out") return c.json({ error: "There's no sign-off waiting in Adobe" }, 409);
+    const url = await signingUrl(x.l.adobe.agreementId).catch(() => null);
+    return url ? c.json({ url }) : c.json({ error: "Adobe hasn't made the signing page ready yet. Use the link in Adobe's email, or try again in a minute." }, 409);
+  });
+
+  // Issuer: nudge the lawyer through Adobe (once a day).
+  app.post("/assets/:id/legal/remind", deps.requireAdmin, async (c) => {
+    const a = await deps.adminAsset(c, c.req.param("id") ?? "");
+    const g = a ? await getLegal(a.id) : null;
+    if (!a || !g) return c.json({ error: "Not found" }, 404);
+    const ad = g.l.adobe;
+    if (ad?.status !== "out") return c.json({ error: "Nothing is waiting in Adobe for your lawyer" }, 409);
+    if (ad.lastReminderAt && Date.now() - Date.parse(ad.lastReminderAt) < 86_400_000) return c.json({ error: "A reminder already went out in the last 24 hours" }, 429);
+    try { await remind(ad.agreementId, "A reminder: your sign-off on Diamondz Tokenize is waiting for your signature."); }
+    catch (e: any) { return c.json({ error: e?.message ?? "Couldn't send the reminder" }, 502); }
+    await putLegal(a.id, a.tenantId, { ...g.l, adobe: { ...ad, lastReminderAt: now() } }, g.d.created_at);
+    return c.json({ ok: true });
   });
 
   app.post("/counsel/:token/comments", async (c) => {
@@ -283,6 +371,7 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
       out.push({
         assetId: a.id, name: a.name, issuer: await deps.tenantName(a.tenantId), chainId: a.chainId, exemption: a.exemption ?? null,
         stage: stage(g.l, x.terms), company: x.company, counsel: g.l.counsel, signed: g.l.signed, letter: g.l.letter ?? null,
+        adobe: g.l.adobe?.status === "signed" ? { signedAt: g.l.adobe.signedAt ?? null, signoff: `/api/platform/reviews/${a.id}/adobe/signoff.pdf`, audit: `/api/platform/reviews/${a.id}/adobe/audit.pdf` } : null,
         emailDomainOk: !FREE_MAIL.has(domainOf(g.l.counsel.email)), termsMatch: x.signedMatches, review: g.l.review ?? null,
       });
     }
@@ -308,6 +397,17 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     return c.json({ ok: true, review });
   });
 
+  app.get("/platform/reviews/:assetId/adobe/:which", deps.requireAdmin, async (c) => {
+    if (!platformOnly(c)) return c.json({ error: "Not found" }, 404);
+    const g = await getLegal(c.req.param("assetId") ?? "");
+    const which = c.req.param("which");
+    const h = which === "signoff.pdf" ? g?.l.adobe?.signedSha : which === "audit.pdf" ? g?.l.adobe?.auditSha : undefined;
+    if (!h) return c.json({ error: "Not found" }, 404);
+    const f = Bun.file(`${EVIDENCE_DIR}/legal/${h}.pdf`);
+    if (!(await f.exists())) return c.json({ error: "Not found" }, 404);
+    return new Response(f, { headers: { "content-type": "application/pdf", "content-disposition": "inline", "cache-control": "private, no-store" } });
+  });
+
   app.get("/platform/reviews/:assetId/letter", deps.requireAdmin, async (c) => {
     if (!platformOnly(c)) return c.json({ error: "Not found" }, 404);
     const g = await getLegal(c.req.param("assetId") ?? "");
@@ -317,5 +417,40 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     return new Response(f, { headers: { "content-type": "application/pdf", "content-disposition": "inline", "cache-control": "private, no-store" } });
   });
 
-  return { clearance, companyOf };
+  /** Adobe says something happened to a lawyer's sign-off: re-read it from Adobe (never trust the webhook body). */
+  async function adobeSync(assetId: string, event?: string) {
+    const g = await getLegal(assetId);
+    const ad = g?.l.adobe;
+    if (!g || !ad || ad.status !== "out") return;
+    const s = await agreementStatus(ad.agreementId);
+    if (isSigned(s)) {
+      const [pdf, audit] = await Promise.all([signedPdf(ad.agreementId), auditPdf(ad.agreementId)]);
+      const signedSha = sha(pdf), auditSha = sha(audit);
+      mkdirSync(`${EVIDENCE_DIR}/legal`, { recursive: true });
+      await Bun.write(`${EVIDENCE_DIR}/legal/${signedSha}.pdf`, pdf);
+      await Bun.write(`${EVIDENCE_DIR}/legal/${auditSha}.pdf`, audit);
+      const at = now();
+      const p = ad.pending;
+      await putLegal(assetId, g.d.tenant_id, {
+        ...g.l, adobe: { ...ad, status: "signed", signedAt: at, identityAt: ad.identityAt ?? at, signedSha, auditSha },
+        signed: { at, name: p.name, barState: p.barState, barNumber: p.barNumber, terms: p.terms, ip: null, via: "adobe" }, comments: undefined, review: undefined,
+      }, g.d.created_at);
+      return;
+    }
+    if (isClosedUnsigned(s)) {
+      await putLegal(assetId, g.d.tenant_id, { ...g.l, adobe: { ...ad, status: s === "EXPIRED" ? "expired" : event === "AGREEMENT_REJECTED" ? "declined" : "canceled" } }, g.d.created_at);
+      return;
+    }
+    if (event && ["AGREEMENT_WEB_IDENTITY_AUTHENTICATED", "AGREEMENT_KBA_AUTHENTICATED"].includes(event) && !ad.identityAt) {
+      await putLegal(assetId, g.d.tenant_id, { ...g.l, adobe: { ...ad, identityAt: now() } }, g.d.created_at);
+    }
+  }
+  /** Sign-offs still out in Adobe (for the 10-minute poll). */
+  async function adobeOpen() {
+    const out: string[] = [];
+    for (const d of await store.docsSince("legal", "1970-01-01T00:00:00Z")) if ((JSON.parse(d.data) as Legal).adobe?.status === "out") out.push(d.id);
+    return out;
+  }
+
+  return { clearance, companyOf, adobeSync, adobeOpen };
 }

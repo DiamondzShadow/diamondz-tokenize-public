@@ -26,7 +26,11 @@ export default function LegalPanel({ assetId, onState }: { assetId: string; onSt
   };
   if (!s) return err ? <div className="notice err">{err}</div> : <p className="muted">Loading…</p>;
   const c = s.counsel;
-  const steps: [string, string | null][] = [["Invited", c?.invitedAt ?? null], ["Lawyer opened it", c?.openedAt ?? null], ["Lawyer signed", s.stage === "changed" ? null : c?.signedAt ?? null], ["Diamondz approved", s.stage === "approved" ? s.review?.at ?? null : null]];
+  const ad = s.adobe?.current ? s.adobe : null;
+  const steps: [string, string | null][] = s.adobeConnected || ad
+    ? [["Sent", c?.invitedAt ?? null], ["Opened by your lawyer", c?.openedAt ?? null], ["Identity confirmed", ad?.identityAt ?? (s.stage === "changed" ? null : c?.via === "adobe" ? c.signedAt : null)], ["Signed in Adobe", s.stage === "changed" ? null : c?.via === "adobe" ? c.signedAt : null], ["Diamondz review", s.stage === "approved" ? s.review?.at ?? null : null]]
+    : [["Invited", c?.invitedAt ?? null], ["Lawyer opened it", c?.openedAt ?? null], ["Lawyer signed", s.stage === "changed" ? null : c?.signedAt ?? null], ["Diamondz approved", s.stage === "approved" ? s.review?.at ?? null : null]];
+  const remind = async () => { setBusy("remind"); setErr(""); try { await api.legalRemind(assetId); setSent(""); await load(); } catch (e) { setErr((e as Error).message); } finally { setBusy(""); } };
   const canInvite = !c || ["comments", "changed", "returned"].includes(s.stage) || s.stage === "invited" || s.stage === "opened";
 
   return (
@@ -40,13 +44,20 @@ export default function LegalPanel({ assetId, onState }: { assetId: string; onSt
       </div>
 
       <div className="legal-row" style={{ alignItems: "flex-start", flexDirection: "column" }}>
-        <div><b>2. Your lawyer signs off</b><span className="muted">We email your securities lawyer a private link. They review the offering and sign themselves. You can't sign for them.</span></div>
+        <div><b>2. Your lawyer signs off</b><span className="muted">{s.adobeConnected ? "We email your securities lawyer a private link. They review the offering, upload their opinion letter, and sign in Adobe Acrobat Sign after a government ID check. You can't sign for them." : "We email your securities lawyer a private link. They review the offering and sign themselves. You can't sign for them."}</span></div>
         {c && (
           <div className="legal-tl" aria-label="Where it stands">
             {steps.map(([label, at]) => <div key={label} className={at ? "on" : ""}><b>{label}</b><span>{at ? when(at) : ""}</span></div>)}
           </div>
         )}
         {c && <span className="muted" style={{ fontSize: 13 }}>Sent to {c.name}, {c.firm} ({c.email}) · {c.barState} bar {c.barNumber}</span>}
+        {ad?.status === "out" && (
+          <div className="row" style={{ flexWrap: "wrap", gap: 10 }}>
+            <span className="tag y">Out for signature in Adobe since {when(ad.sentAt)}</span>
+            <button type="button" className="btn ghost sm" disabled={!!busy} onClick={remind}>{busy === "remind" ? "Sending…" : "Send a reminder now"}</button>
+          </div>
+        )}
+        {ad && ["declined", "expired", "canceled"].includes(ad.status) && <div className="notice">The Adobe request {ad.status === "declined" ? "was declined" : ad.status === "expired" ? "expired unsigned" : "was canceled"}. Your lawyer can open the link again and press Sign off for a new one, or send the link again below.</div>}
         {s.stage === "comments" && c?.comments && <div className="notice">Your lawyer didn't sign yet and wrote: “{c.comments.text}”</div>}
         {s.stage === "changed" && <div className="notice err">The terms changed after your lawyer signed. Send the link again so they can review the new terms.</div>}
         {s.stage === "returned" && s.review && <div className="notice err">Diamondz sent the review back: “{s.review.note}”</div>}

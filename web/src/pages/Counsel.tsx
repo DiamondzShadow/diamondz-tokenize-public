@@ -8,6 +8,11 @@ import { networkById, stellarById } from "../lib/chains";
 import { Mark } from "./Landing";
 import { BAR_STATES } from "../app/Legal";
 
+export const COUNSEL_STATEMENTS = (barState: string) => [
+  `I'm licensed to practice law in ${barState} and I'm in good standing.`,
+  "I've reviewed the offering's terms, documents and the transfer rules listed here.",
+  "In my opinion the offering may proceed under the exemption shown, as described in my letter.",
+];
 const EX: Record<string, string> = { "506c": "Rule 506(c)", regs: "Regulation S", unsure: "Not decided yet" };
 
 export default function Counsel() {
@@ -30,7 +35,14 @@ export default function Counsel() {
   const sendCode = () => run("code", async () => { setSentTo((await api.counselCode(token)).email); });
   const verify = (e: FormEvent) => { e.preventDefault(); run("verify", async () => { await api.counselVerify(token, code); await load(); }); };
   const upload = (f: File | undefined) => f && run("upload", async () => { await api.counselLetter(token, f); await load(); });
-  const sign = (e: FormEvent) => { e.preventDefault(); run("sign", async () => { await api.counselSign(token, { barState: bar.state, barNumber: bar.number.trim(), statements: [true, true, true], name: name.trim() }); setDone("signed"); await load(); }); };
+  const sign = (e: FormEvent) => { e.preventDefault(); run("sign", async () => {
+    const r = await api.counselSign(token, { barState: bar.state, barNumber: bar.number.trim(), statements: [true, true, true], name: name.trim() });
+    if (r.adobe) { if (r.url) { window.location.assign(r.url); return; } setDone("adobe"); await load(); return; }
+    setDone("signed"); await load();
+  }); };
+  const openAdobe = () => run("adobe", async () => { window.location.assign((await api.counselAdobe(token)).url); });
+  const viaAdobe = !!v?.adobe?.connected;
+  const [editing, setEditing] = useState(false);
   const sendComments = (e: FormEvent) => { e.preventDefault(); run("comments", async () => { await api.counselComments(token, comments.trim()); setDone("comments"); }); };
 
   const o = v?.offering;
@@ -81,7 +93,15 @@ export default function Counsel() {
                 {o!.documents.length ? o!.documents.map((d) => <div className="li" key={d.sha256}><span className="muted">{d.name}</span>{d.url ? <a href={d.url} target="_blank" rel="noreferrer">Open ↗</a> : <span className="mono" style={{ fontSize: 11 }}>{d.sha256.slice(0, 16)}…</span>}</div>) : <span className="muted" style={{ fontSize: 13 }}>No documents attached.</span>}
               </section>
               {v.signed || done === "signed" ? (
-                <section className="panel"><h3>Signed</h3><div className="notice ok">You signed off{v.signed ? ` on ${new Date(v.signed.at).toLocaleString()}` : ""}. Diamondz will confirm your license and approve. If the terms change, you'll be asked again.</div></section>
+                <section className="panel"><h3>Signed</h3><div className="notice ok">You signed off{v.signed ? ` on ${new Date(v.signed.at).toLocaleString()}` : ""}{v.signed?.via === "adobe" ? " in Adobe Acrobat Sign" : ""}. Diamondz will confirm your license and approve. If the terms change, you'll be asked again.</div></section>
+              ) : (v.adobe?.waiting || done === "adobe") && !editing ? (
+                <section className="panel">
+                  <h3>Sign in Adobe Acrobat Sign</h3>
+                  <p className="muted" style={{ margin: 0 }}>Your sign-off letter is ready in Adobe: the terms you reviewed, your letter's fingerprint and the three statements. Adobe checks your government ID, then you sign. We also emailed you Adobe's link.</p>
+                  <button type="button" className="btn primary" disabled={!!busy} onClick={openAdobe} style={{ justifyContent: "center" }}>{busy === "adobe" ? "Opening Adobe…" : "Open Adobe to sign ↗"}</button>
+                  <button type="button" className="btn link sm" onClick={() => { setEditing(true); setDone(""); }}>Change my letter or bar details first</button>
+                  <span className="muted" style={{ fontSize: 12 }}>Pressing Sign off again with changes replaces the Adobe request.</span>
+                </section>
               ) : (
                 <form className="panel" onSubmit={sign}>
                   <h3>Your sign-off</h3>
@@ -93,13 +113,10 @@ export default function Counsel() {
                     {v.letter ? <span className="counsel-file">Uploaded · {(v.letter.bytes / 1024).toFixed(0)} KB <label className="btn link sm">Replace<input type="file" accept="application/pdf" hidden onChange={(e) => upload(e.target.files?.[0])} /></label></span>
                       : <input type="file" accept="application/pdf" className="input" disabled={busy === "upload"} onChange={(e) => upload(e.target.files?.[0])} />}
                   </label>
-                  {[
-                    `I'm licensed to practice law in ${bar.state} and I'm in good standing.`,
-                    "I've reviewed the offering's terms, documents and the transfer rules listed here.",
-                    "In my opinion the offering may proceed under the exemption shown, as described in my letter.",
-                  ].map((t, i) => <label key={i} className="counsel-ck"><input type="checkbox" checked={st[i]} onChange={(e) => setSt(st.map((x, j) => (j === i ? e.target.checked : x)))} />{t}</label>)}
+                  {COUNSEL_STATEMENTS(bar.state).map((t, i) => <label key={i} className="counsel-ck"><input type="checkbox" checked={st[i]} onChange={(e) => setSt(st.map((x, j) => (j === i ? e.target.checked : x)))} />{t}</label>)}
                   <label className="field">Type your full name to sign<input className="input counsel-sig" value={name} onChange={(e) => setName(e.target.value)} placeholder={v.counsel?.name} /></label>
-                  <button className="btn primary" disabled={!!busy || !v.letter || !st.every(Boolean) || name.trim().length < 3 || !bar.number.trim()} style={{ justifyContent: "center" }}>{busy === "sign" ? "Signing…" : "Sign off"}</button>
+                  <button className="btn primary" disabled={!!busy || !v.letter || !st.every(Boolean) || name.trim().length < 3 || !bar.number.trim()} style={{ justifyContent: "center" }}>{busy === "sign" ? (viaAdobe ? "Preparing in Adobe…" : "Signing…") : viaAdobe ? "Sign off in Adobe" : "Sign off"}</button>
+                  {viaAdobe && <span className="muted" style={{ fontSize: 12 }}>Next, Adobe Acrobat Sign opens: it checks your government ID and you sign the sign-off letter there.</span>}
                   {!showComments ? <button type="button" className="btn link sm" onClick={() => setShowComments(true)}>I can't sign this yet: send my comments to the issuer</button> : null}
                 </form>
               )}

@@ -1399,3 +1399,79 @@ h1,h2,h3,.display,.logo{font-weight:var(--heading-weight)}
 .mk-strip .mk-stat b{font-size:22px}
 .mk-strip .mk-stat.wide{grid-column:1 / -1}
 .mk-read{font-size:15px;color:var(--muted)}
+
+/* ---- signed checks through Adobe Acrobat Sign (designs E1–E7) */
+.es-kicker{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.es-h2{font-size:26px;line-height:1.2;margin:4px 0 0}
+.es-grid{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.es-list{flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.es-card{border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;background:var(--surface)}
+.es-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.es-steps li{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.es-steps li i{height:4px;border-radius:2px;background:var(--line)}
+.es-steps li.on i{background:var(--ok)}
+.es-steps li b{font-weight:600}
+.es-steps li.on b{color:var(--text)}
+.es-foot{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:13px;border-top:1px solid var(--line);padding-top:12px}
+.es-foot a{color:var(--brand)}
+.es-danger{color:var(--bad)!important}
+.es-how{flex:1 1 280px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--surface)}
+.es-how ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45}
+.es-note{background:var(--brand-soft);color:var(--brand);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5}
+.es-dialog{width:100%;max-width:920px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;display:flex;flex-wrap:wrap}
+.es-form{flex:999 1 440px;min-width:0;padding:24px;display:flex;flex-direction:column;gap:16px}
+.es-form select,.es-form input,.es-form textarea,.es-sign textarea,.es-firmform input{min-height:44px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font:inherit;font-size:14px;color:var(--text);background:var(--surface)}
+.es-form textarea,.es-sign textarea{padding:10px 12px;resize:vertical}
+.es-hint{font-size:12px;color:var(--muted);line-height:1.45}
+.es-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.es-radio{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.es-radio legend{font-size:13px;color:var(--muted);margin-bottom:8px}
+.es-radio label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;cursor:pointer}
+.es-radio label.on{border-color:var(--brand);background:var(--brand-soft)}
+.es-radio input{margin-top:3px}
+.es-radio .muted{font-size:13px}
+.es-letter{flex:1 1 280px;background:var(--surface2);border-left:1px solid var(--line);padding:24px;display:flex;flex-direction:column;gap:12px}
+.es-paper{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;font-size:12px;line-height:1.6;display:flex;flex-direction:column;gap:8px;overflow-wrap:anywhere}
+.es-paper b{font-size:15px}
+.es-paper .sig{border-top:1px dashed var(--line);padding-top:8px;color:var(--muted)}
+.es-sign .panel{max-width:760px}
+.es-dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;font-size:14px}
+.es-dl dt{color:var(--muted);font-size:12px}
+.es-dl dd{margin:2px 0 0}
+.es-next{background:var(--surface2);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.es-next ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.5}
+.es-match{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:6px;font-size:13px;color:var(--ok)}
+.es-match span{flex:1 1 240px}
+.es-conn{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-size:13px}
+.es-dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.es-dot.ok{background:var(--ok)}
+.es-chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:13px;cursor:pointer}
+.es-chip.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand);font-weight:600}
+.es-table{width:100%;min-width:860px;border-collapse:collapse}
+.es-table th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.es-table td{font-size:14px;padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+.es-table tr:last-child td{border-bottom:0}
+.es-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.es-actions a{color:var(--brand)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.es-firms{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.es-firms li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);font-size:14px}
+.es-firmform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end;border-top:1px solid var(--line);padding-top:16px}
+.es-kinds{grid-column:1/-1;border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px}
+.es-kinds legend{font-size:13px;color:var(--muted);margin-bottom:6px}
+.es-kinds label{display:inline-flex;gap:6px;align-items:center;min-height:32px}
+.es-firmform .btn{justify-self:start}
+@media (max-width:640px){
+  .es-steps{grid-template-columns:1fr;gap:6px}
+  .es-steps li{flex-direction:row;align-items:center;gap:8px}
+  .es-steps li i{width:14px;height:14px;border-radius:50%;flex:none}
+  .es-steps li span{margin-left:auto}
+  .es-two,.es-dl,.es-firmform{grid-template-columns:1fr}
+  .es-letter{border-left:0;border-top:1px solid var(--line)}
+  .es-form{padding:18px}
+}
+.es-who b{font-weight:600}
+.es-match span{flex:1 1 100%}
+.es-tag{display:inline-block;white-space:nowrap;margin-bottom:4px}
+.chk .who.es-who{display:block;line-height:1.5}
+.es-overlay{z-index:90}

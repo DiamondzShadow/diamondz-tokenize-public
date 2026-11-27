@@ -15,6 +15,7 @@ import { ProofPanel, useProof } from "../lib/Proof";
 import PayoutsPanel from "./Payouts";
 import AccreditationPanel from "./Accreditation";
 import BankProofPanel from "./BankProof";
+import EsignPanel from "./Esign";
 import FormDPanel from "./FormD";
 import ApprovalsPanel from "./Approvals";
 import { TrexControlsPanel, TrexInvestorsPanel, UpgradeChoice, trexSteps, type UpgradeMode } from "./Trex";
@@ -99,6 +100,7 @@ export default function AssetDetail() {
         {deployed && net && ["real-estate", "energy", "music-ip", "film"].includes(asset.assetClass) && <BankProofPanel asset={asset} net={net} />}
         {deployed && net && ipAvailable(asset, net) && <IpRegisterPanel asset={asset} net={net} onChange={setAsset} />}
         {deployed && net && ipAvailable(asset, net) && isLicensable(asset.assetClass) && (asset as any).ip?.registered && <IpLicensingPanel asset={asset} net={net} />}
+        {deployed && net && <EsignPanel asset={asset} />}
         {deployed && !stellar && <AdminProof asset={asset} />}
       </div>
     </>
