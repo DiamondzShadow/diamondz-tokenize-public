@@ -10,3 +10,4 @@ contracts/broadcast/*/31337/
 *.db-*
 deploy-logs/
 __pycache__/
+tokenize.env
