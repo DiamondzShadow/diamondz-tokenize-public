@@ -268,6 +268,7 @@ export const api = {
   createAsset: (a: Partial<Asset>) => req<Asset>("/assets", { method: "POST", body: JSON.stringify(a) }),
   updateAsset: (id: string, a: Partial<Asset>) =>
     req<Asset>(`/assets/${id}`, { method: "PATCH", body: JSON.stringify(a) }),
+  identity: (wallet: string, chainId: number) => req<{ required: boolean; passed: boolean; status: string }>(`/identity/${wallet}?chainId=${chainId}`),
   screen: (address: string, chainId: number) => req<{ sanctioned: boolean; ofacListUpdatedAt: string; oracle: boolean | null }>(`/screen/${address}?chainId=${chainId}`),
   recordDeployment: (id: string, d: { registry: string; token: string; sale: string; payToken: string; rules?: string; txs: string[]; feeTx?: string }) =>
     req<Asset>(`/assets/${id}/deployment`, { method: "POST", body: JSON.stringify(d) }),
@@ -316,6 +317,7 @@ export const api = {
   team: () => req<TeamState>("/team"),
   // ---- investors approved without an identity check (2026-11-20)
   assetApprovals: (id: string) => req<ApprovalAudit>(`/assets/${id}/approvals`),
+  marketIssuer: (id: string) => req<{ verified: boolean; name: string | null }>(`/market/${id}/issuer`),
   marketApprovals: (id: string) => req<Omit<ApprovalAudit, "wallets">>(`/market/${id}/approvals`),
   // ---- legal sign-off (L1–L4)
   legal: (assetId: string) => req<LegalState>(`/assets/${assetId}/legal`),

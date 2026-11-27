@@ -8,7 +8,7 @@ import { StellarConsole, StellarDeployPanel } from "./Stellar";
 import { GoLiveCard } from "./Wizards";
 import { useTenant } from "../lib/tenant";
 import { CLASS_CHECKS, classHash, kindHash } from "../lib/verification";
-import { documentURI, hasRules, rulesConfig, saleWindow } from "../lib/rules";
+import { OPEN_COUNTRIES, documentURI, hasRules, isSanctioned, rulesConfig, saleWindow } from "../lib/rules";
 import { IpLicensingPanel, IpRegisterPanel, ipAvailable } from "./IPPanel";
 import { isLicensable } from "../lib/ip";
 import { ProofPanel, useProof } from "../lib/Proof";
@@ -537,6 +537,9 @@ export function InvestorsPanel({ asset, net, prefill }: { asset: Asset; net: Net
     setBusy(true);
     setStatus("");
     try {
+      if (isSanctioned(Number(country))) throw new Error("Investors from sanctioned countries can't be approved.");
+      const id = await api.identity(wallet, net.id);
+      if (id.required && !id.passed) throw new Error("This wallet hasn't passed an identity check with you. Send the investor to the offering page to verify first.");
       const scr = await api.screen(wallet, net.id);
       if (scr.sanctioned) throw new Error("This wallet is on a sanctions list (OFAC). It can't be verified.");
       const me = await connectWallet();
@@ -557,18 +560,22 @@ export function InvestorsPanel({ asset, net, prefill }: { asset: Asset; net: Net
     <div className="panel" id="investors">
       <h3>Investors</h3>
       <p className="muted" style={{ fontSize: 14 }}>
-        Until automatic KYC is connected, verify investors yourself after you've checked their identity off-platform. Only verified wallets can buy, receive or send the token.
-        Your connected wallet needs the verifier role on the registry (the wallet that deployed it has it).
+        {net.testnet
+          ? "Test network: approve any wallet for practice."
+          : "Approve wallets that passed an identity check on the offering page."} Only approved wallets can buy, receive or send the token.
       </p>
       <div style={{ maxWidth: 320 }}><Connect chainId={net.id} /></div>
       <div className="form3">
         <label className="field">Investor wallet<input className="input" value={wallet} placeholder="0x… full address" onChange={(e) => setWallet(e.target.value.trim())} /></label>
-        <label className="field">Country (ISO numeric)<input className="input" value={country} inputMode="numeric" onChange={(e) => setCountry(e.target.value.replace(/\D/g, "").slice(0, 3))} /></label>
+        <label className="field">Country of residence
+          <select className="input" value={country} onChange={(e) => setCountry(e.target.value)}>
+            {OPEN_COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+          </select>
+        </label>
         <label className="field">Accredited
           <select className="input" value={accredited ? "y" : "n"} onChange={(e) => setAccredited(e.target.value === "y")}><option value="y">Yes</option><option value="n">No</option></select>
         </label>
       </div>
-      <p className="muted" style={{ fontSize: 12 }}>840 = United States, 826 = United Kingdom, 124 = Canada, 276 = Germany.</p>
       {asset.rules?.accreditedOnly && <div className="notice">This offering is for accredited investors only: the token refuses wallets marked "No". Check the accreditation panel above first.</div>}
       {status && <div className="notice">{status}</div>}
       <div className="row">

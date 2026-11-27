@@ -83,10 +83,14 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
   const getLegal = async (assetId: string) => { const d = await store.getDoc("legal", assetId); return d ? { d, l: JSON.parse(d.data) as Legal } : null; };
   const putLegal = (assetId: string, tid: string, l: Legal, created?: string) => store.putDoc({ coll: "legal", id: assetId, tenant_id: tid, data: JSON.stringify(l), created_at: created ?? now(), updated_at: now() });
   const companyAccount = async (tid: string) => { const d = await store.getDoc("kyb", tid); return d ? (JSON.parse(d.data) as { accountId: string }).accountId : null; };
-  const companyOf = async (tid: string) => {
+  const companyCache = new Map<string, { at: number; v: ReturnType<typeof companyStatus> }>();
+  const companyOf = async (tid: string, maxAgeMs = 0) => {
+    const hit = companyCache.get(tid);
+    if (maxAgeMs && hit && Date.now() - hit.at < maxAgeMs) return hit.v;
     const id = await companyAccount(tid);
-    if (!id) return { status: "not started" as const, name: null };
-    return companyStatus(await stripe<any>("GET", `/v1/accounts/${encodeURIComponent(id)}`).catch(() => null));
+    const v = id ? companyStatus(await stripe<any>("GET", `/v1/accounts/${encodeURIComponent(id)}`).catch(() => null)) : companyStatus(null);
+    companyCache.set(tid, { at: Date.now(), v });
+    return v;
   };
 
   /** Everything the deploy gates need. `reasons` empty = cleared for a real network. */
@@ -313,5 +317,5 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     return new Response(f, { headers: { "content-type": "application/pdf", "content-disposition": "inline", "cache-control": "private, no-store" } });
   });
 
-  return { clearance };
+  return { clearance, companyOf };
 }

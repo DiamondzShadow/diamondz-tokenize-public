@@ -17,7 +17,7 @@ import { mountPayouts } from "./payouts";
 import { CLASS_CHECKS, classHash, kindByHash } from "../../web/src/lib/verification";
 import { ITEM_ID } from "../../web/src/lib/catalog";
 import { KYC_TOPIC, ACCREDITED_TOPIC, TREX_ARTIFACTS, mountTrex } from "./trex";
-import { Rules, Details, Documents, verifyRules, verifyModule, saleWindow, hasRules } from "./rules";
+import { Rules, Details, Documents, verifyRules, verifyModule, saleWindow, hasRules, withSanctions } from "./rules";
 import { mountMastercard } from "./mastercard";
 import { mountBankProof } from "./bankproof";
 import { mountJobs, registerJob } from "./jobs";
@@ -34,6 +34,7 @@ import { mountApprovals } from "./approvals";
 import { MongoStore, SqliteStore, type Role, type Store, type TenantRow, type LeadRow } from "./store";
 import { emailConfigured, sendLeadAlert } from "./notify";
 import { kycEnabled, mountKyc } from "./kyc";
+import { mountGeo } from "./geo";
 import { mountIp } from "./ip";
 import { mountCards } from "./cards";
 import { mountRpcProxy } from "./rpcproxy";
@@ -271,6 +272,7 @@ const issues = (e: z.ZodError) => e.issues.map((i) => `${i.path.join(".")}: ${i.
 type Env = { Variables: { tenant: TenantRow; site: TenantRow; session: Session; member: { account: string | null; role: Role } } };
 const app = new Hono<Env>().basePath("/api");
 mountSignals(app); // first, so it sees every response (security alerts)
+mountGeo(app); // sanctioned-country visitors are refused before anything else runs
 
 app.use("*", async (c, next) => {
   const t = await resolveTenant(c);
@@ -581,7 +583,7 @@ app.post("/assets", requireAdmin, async (c) => {
   if (parsed.data.standard === "story-ip") return c.json({ error: "Story IP is retired. Use the platform's IP registry: pick ERC-7943 or ERC-3643 for music and film." }, 400);
   const id = `ast_${randomBytes(8).toString("hex")}`;
   const now = new Date().toISOString();
-  const data = JSON.stringify({ ...parsed.data, ...Listing.parse({}), status: "draft" });
+  const data = JSON.stringify({ ...parsed.data, rules: withSanctions(parsed.data.rules), ...Listing.parse({}), status: "draft" });
   await store.insertAsset({ id, tenant_id: c.get("tenant").id, data, created_at: now, updated_at: now });
   return c.json(rowToAsset({ id, tenant_id: c.get("tenant").id, data, created_at: now, updated_at: now }), 201);
 });
@@ -599,6 +601,10 @@ app.patch("/assets/:id", requireAdmin, async (c) => {
     if (changesTerms) return c.json({ error: "This asset is deployed: its terms are on chain and can't be edited here" }, 409);
     const listing = Listing.safeParse({ ...pick(current, LISTING_KEYS), ...pick(body, LISTING_KEYS) });
     if (!listing.success) return c.json({ error: issues(listing.error) }, 400);
+    // Investors only see offerings from issuers whose company passed Stripe business verification.
+    if (listing.data.listed && !current.listed && (await legal.companyOf(c.get("tenant").id)).status !== "verified") {
+      return c.json({ error: "Verify your company before listing (Go live › Verify your company)." }, 409);
+    }
     next = { ...current, ...listing.data };
   } else {
     if (current.trex) {
@@ -616,7 +622,9 @@ app.patch("/assets/:id", requireAdmin, async (c) => {
     if (mismatch) return c.json({ error: mismatch }, 400);
     if (!listing.success) return c.json({ error: issues(listing.error) }, 400);
     if (listing.data.listed) return c.json({ error: "Deploy the asset before listing it on the marketplace" }, 409);
-    next = { ...core.data, ...listing.data, status: "draft", ...(current.trex ? { trex: current.trex } : {}), ...(current.stellar ? { stellar: current.stellar } : {}), ...(current.formD ? { formD: current.formD } : {}) };
+    // Sanctioned countries are always blocked; not re-applied once a deployment has started (its rules are fixed).
+    const rules = current.trex || current.stellar ? core.data.rules : withSanctions(core.data.rules);
+    next = { ...core.data, rules, ...listing.data, status: "draft", ...(current.trex ? { trex: current.trex } : {}), ...(current.stellar ? { stellar: current.stellar } : {}), ...(current.formD ? { formD: current.formD } : {}) };
   }
   const now = new Date().toISOString();
   const data = JSON.stringify(next);
@@ -1152,16 +1160,29 @@ mountPayouts(app, {
   siteHas,
 });
 
+// ------------------------------------------------------------------ investor identity gate
+// 2026-11-20: an issuer can no longer vouch for an investor on its own. On a real network the wallet must have an
+// approved identity check with this issuer first (test networks stay open for practice with play money).
+const NO_ID = "This investor hasn't passed an identity check with you yet. Send them to the offering page to verify first.";
+async function identityOf(c: Context, wallet: string, chainId: number) {
+  const k = await store.kycByWallet((c as Context<Env>).get("tenant").id, wallet).catch(() => null);
+  const required = networkById(chainId)?.testnet === false && kycEnabled();
+  const passed = k?.status === "approved";
+  return { required, passed, status: k?.status ?? "none", blocked: required && !passed };
+}
+app.get("/identity/:wallet", requireAdmin, async (c) => {
+  const w = c.req.param("wallet") ?? "";
+  if (!isAddress(w)) return c.json({ error: "Not an address" }, 400);
+  const { blocked: _b, ...out } = await identityOf(c, w, Number(c.req.query("chainId") ?? 0));
+  return c.json(out);
+});
+
 // ------------------------------------------------------------------ ERC-3643 (platform T-REX relayer)
 mountTrex(app, {
   requireAdmin,
   // 2026-11-20: an issuer can no longer vouch for an investor on its own. On a real network the wallet must have an
   // approved identity check with this issuer first (test networks stay open for practice with play money).
-  identityGate: async (c, wallet, chainId) => {
-    if (networkById(chainId)?.testnet !== false || !kycEnabled()) return null;
-    const k = await store.kycByWallet((c as Context<Env>).get("tenant").id, wallet);
-    return k?.status === "approved" ? null : "This investor hasn't passed an identity check with you yet. Send them to the offering page to verify first.";
-  },
+  identityGate: async (c, wallet, chainId) => ((await identityOf(c, wallet, chainId)).blocked ? NO_ID : null),
   getAsset: adminAssetOf,
   saveAsset: async (c, a) => {
     const { id, tenantId: _t, createdAt: _c, updatedAt: _u, ...data } = a;
@@ -1352,6 +1373,15 @@ const legal = mountLegal(app, {
   origin: (c) => `https://${hostOf(c)}`,
   tooMany,
 });
+// Public: is the offering's issuer a verified company (Stripe business verification)? Name as Stripe has it.
+app.get("/market/:id/issuer", async (c) => {
+  const a = (await siteListed(c)).find((x: any) => x.id === c.req.param("id"));
+  if (!a) return c.json({ error: "Not found" }, 404);
+  const co = await legal.companyOf(a.tenantId, 10 * 60_000).catch(() => null);
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json({ verified: co?.status === "verified", name: co?.status === "verified" ? co.name : null });
+});
+
 
 // ------------------------------------------------------------------ client accounts for advisors (design 4)
 const ERC20_BAL = [

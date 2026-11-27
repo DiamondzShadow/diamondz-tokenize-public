@@ -81,11 +81,11 @@ export function IpRegisterPanel({ asset, net, onChange }: { asset: Asset; net: N
         const isAdmin = (await pc.readContract({ address: regs.assets, abi: A, functionName: "isOfferingAdmin", args: [dep.token, me] })) as boolean;
         if (!isAdmin) {
           // Mainnet after the handover: the treasury Safe administers the token, so it registers.
-          setSafeTxs([{ to: regs.assets, data: encodeFunctionData({ abi: A, functionName: "register", args: regArgs }), why: "Register the asset (from the Safe that administers the token)" }]);
-          setMsg({ kind: "ok", text: "Your connected wallet doesn't administer this token. Send the registration below from your treasury Safe, then press Register again." });
+          setSafeTxs([{ to: regs.assets, data: encodeFunctionData({ abi: A, functionName: "register", args: regArgs }), why: "Create the asset page (from the Safe that administers the token)" }]);
+          setMsg({ kind: "ok", text: "Your connected wallet doesn't administer this token. Send the transaction below from your treasury Safe, then press Create asset page again." });
           return;
         }
-        setBusy("Registering the asset (confirm in your wallet)…");
+        setBusy("Creating the asset page (confirm in your wallet)…");
         await send(net.id, me, regs.assets, A, "register", regArgs);
         assetId = (await pc.readContract({ address: regs.assets, abi: A, functionName: "assetOf", args: [dep.token] })) as bigint;
       }
@@ -104,7 +104,7 @@ export function IpRegisterPanel({ asset, net, onChange }: { asset: Asset; net: N
         // Mainnet: the treasury Safe holds the asset; hand over the calls to send from it.
         setSafeTxs(calls.map((c) => ({ to: regs.licenses, data: encodeFunctionData({ abi: L, functionName: "publishType", args: c.args }), why: c.why })));
         await ipApi.registered(asset.id, { assetId: assetId.toString(), types: {} });
-        setMsg({ kind: "ok", text: "Asset registered. Send the license publications below from your treasury Safe, then press Register again to record them." });
+        setMsg({ kind: "ok", text: "Asset page created. Send the license publications below from your treasury Safe, then press the button again to record them." });
         return;
       }
       for (const c of calls) {
@@ -115,7 +115,7 @@ export function IpRegisterPanel({ asset, net, onChange }: { asset: Asset; net: N
       setBusy("Checking everything on chain…");
       await ipApi.registered(asset.id, { assetId: assetId.toString(), types: newTypes });
       onChange({ ...(asset as any), ip: { ...ip, ...d, registered: { assetId: assetId.toString(), types: { ...(registered?.types ?? {}), ...newTypes } } } });
-      setMsg({ kind: "ok", text: "Registered. Your public IP page is live." });
+      setMsg({ kind: "ok", text: "Done. Your public asset page is live." });
     } catch (e) {
       setMsg({ kind: "err", text: walletError(e) });
     } finally {
@@ -126,13 +126,13 @@ export function IpRegisterPanel({ asset, net, onChange }: { asset: Asset; net: N
   return (
     <div className="panel" id="ip">
       <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
-        <h3>{registered ? "Asset record" : "Register your asset"}</h3>
-        {registered && <Link className="btn ghost sm" to={`/ip/${asset.id}`}>Public IP page ↗</Link>}
+        <h3>{registered ? "Public asset page" : `Public asset page${licensable ? " & licensing" : ""} (optional)`}</h3>
+        {registered && <Link className="btn ghost sm" to={`/ip/${asset.id}`}>View public page ↗</Link>}
       </div>
       <p className="muted" style={{ fontSize: 14 }}>
         {registered
-          ? `Registered as asset #${registered.assetId} on ${net.name}.`
-          : `Gives your ${asset.assetClass === "film" ? "film" : "asset"} a public page and an asset NFT held by your ${net.testnet ? "wallet" : "treasury"}${licensable ? ", and opens it for licensing" : ""}. Your offering's token stays exactly as it is.`}
+          ? `Live as asset #${registered.assetId} on ${net.name}.`
+          : `Optional, and separate from your investor registry. Gives your ${asset.assetClass === "film" ? "film" : "asset"} a public page and an asset NFT (a deed for the asset) held by your ${net.testnet ? "wallet" : "treasury"}${licensable ? ", and opens it for licensing" : ""}. Your offering's token, sale and investors stay exactly as they are.`}
       </p>
 
       {!registered && (
@@ -188,7 +188,7 @@ export function IpRegisterPanel({ asset, net, onChange }: { asset: Asset; net: N
         </div>
       )}
       {(!registered || unpublished.length > 0) && (
-        <button className="btn primary sm" disabled={!!busy} onClick={run}>{busy ?? (registered ? `Publish ${unpublished.length} license type${unpublished.length === 1 ? "" : "s"}` : "Register on chain")}</button>
+        <button className="btn primary sm" disabled={!!busy} onClick={run}>{busy ?? (registered ? `Publish ${unpublished.length} license type${unpublished.length === 1 ? "" : "s"}` : "Create asset page")}</button>
       )}
     </div>
   );
@@ -260,7 +260,7 @@ export function IpLicensingPanel({ asset, net }: { asset: Asset; net: Network })
 
   return (
     <div className="panel" id="licensing">
-      <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}><h3>Licensing</h3><Link className="btn ghost sm" to={`/ip/${asset.id}`}>Public IP page ↗</Link></div>
+      <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}><h3>Licensing</h3><Link className="btn ghost sm" to={`/ip/${asset.id}`}>View public page ↗</Link></div>
       {page && (
         <div className="kpis">
           <div className="kpi"><span className="muted">Active licenses</span><b>{page.licenses.filter((l) => l.status === "active").length}</b></div>

@@ -10,7 +10,7 @@ import { FREIGHTER_URL, connectFreighter, signWithFreighter } from "../lib/freig
 import Connect from "../lib/Connect";
 import { useConnectedAccount } from "../lib/wallet";
 import { useKycStatus } from "../lib/kyc";
-import { COUNTRIES, US, countryName, lockupLabel, type Rules } from "../lib/rules";
+import { OPEN_COUNTRIES, US, countryName, lockupLabel, type Rules } from "../lib/rules";
 import { SiteHeader } from "../lib/Chrome";
 import { Question, WizardShell, type WizStep } from "../app/Wizards";
 import { payAmount } from "../app/Stellar";
@@ -121,7 +121,7 @@ function Flow({ a }: { a: MarketAsset }) {
     <Question n={2} of={of} title="Where do you live?" canNext={allowed} onBack={back} onNext={next} intro="Some offerings are only open to certain countries. We tell you now, before any paperwork.">
       <div className="q"><label htmlFor="iv-country">Country of residence</label>
         <select id="iv-country" className="input" value={country} onChange={(e) => setCountry(Number(e.target.value))}>
-          {COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+          {OPEN_COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
         </select>
       </div>
       {!allowed && <div className="notice err">Sorry, this offering isn't open to investors in {countryName(country)}{r.countryMode === "allow" ? `. It's open to: ${(r.countries ?? []).map(countryName).join(", ")}.` : "."}</div>}

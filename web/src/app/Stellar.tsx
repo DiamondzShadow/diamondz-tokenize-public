@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SaleWizard } from "./Wizards";
 import { api, type Asset, type StellarDeployment, type StellarSale, type StellarTerms, type StellarToken } from "../lib/api";
 import { stellarAccountUrl, stellarTxUrl, networkById, type StellarNetwork } from "../lib/chains";
-import { COUNTRIES, countryName, lockupLabel, US } from "../lib/rules";
+import { OPEN_COUNTRIES, countryName, lockupLabel, US } from "../lib/rules";
 import { CHECK_KINDS, CLASS_CHECKS, kindHash, type CheckKindId } from "../lib/verification";
 import { connectWallet, publicClientFor, walletClientFor } from "../lib/wallet";
 import { claimSignerMessage } from "../lib/claims";
@@ -483,7 +483,7 @@ export function StellarConsole({ asset, net, onChange }: { asset: Asset; net: St
             <input id="st-acct" className="input mono" placeholder="Stellar wallet, G…" value={acct} onChange={(e) => setAcct(e.target.value)} />
             <label htmlFor="st-cc" className="muted" style={{ fontSize: 13 }}>Country of residence</label>
             <select id="st-cc" className="input" value={country} onChange={(e) => setCountry(Number(e.target.value))}>
-              {COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+              {OPEN_COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
             </select>
             <button type="submit" className="btn ghost" disabled={!!busy || !/^G[A-Z2-7]{55}$/.test(acct.trim())}>{busy.startsWith("verify:") ? "Verifying…" : "Verify investor"}</button>
           </form>

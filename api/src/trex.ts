@@ -29,7 +29,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { z } from "zod";
 import trexArtifacts from "./contracts/trex-artifacts.json";
 import { networkById, trexFor, type Network, rpcUrl } from "./chains";
-import { Rules, hasRules, moduleSettings } from "./rules";
+import { Rules, SANCTIONED, hasRules, moduleSettings } from "./rules";
 
 const T = trexArtifacts as unknown as Record<string, { abi: Abi; bytecode: Hex }>;
 export const KYC_TOPIC = 1n;
@@ -332,6 +332,7 @@ export function mountTrex(app: Hono<any>, deps: Deps) {
     const Claim = z.object({ data: z.string().regex(/^0x[0-9a-fA-F]{2,2000}$/), signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/) });
     const body = Kyc.extend({ data: z.string().regex(/^0x[0-9a-fA-F]{2,2000}$/), accredited: Claim.optional() }).safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: "Missing wallet, country or signature" }, 400);
+    if (SANCTIONED.includes(body.data.country)) return c.json({ error: "Investors from sanctioned countries can't be approved." }, 403);
     if (asset.trex.accreditedOnly && !body.data.accredited) return c.json({ error: "This offering is for accredited investors only: sign the accreditation claim too" }, 400);
     const wallet = getAddress(body.data.wallet);
     const refused = await deps.screen(wallet, net.id);

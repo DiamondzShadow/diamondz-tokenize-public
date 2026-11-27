@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { dayOn, exemptionText, filedOn, formName } from "../app/FormD";
-import { ListingApprovals } from "../app/Approvals";
+import { ListingApprovals, ListingIssuer } from "../app/Approvals";
 import { Link, useParams } from "react-router-dom";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { api, type MarketAsset, type StellarSale } from "../lib/api";
@@ -15,8 +15,9 @@ import type { Proof } from "../lib/api";
 import { InvestorTabs, Sheet, SiteHeader } from "../lib/Chrome";
 import { AssetClassIcon } from "../lib/Icons";
 import VerifyChecklist from "../lib/VerifyChecklist";
+import BringUsdc, { canBringUsdc } from "../lib/BringUsdc";
 import { QUESTIONS, type Details } from "../lib/questions";
-import { COUNTRIES, US, countryName, lockupLabel, type Rules } from "../lib/rules";
+import { OPEN_COUNTRIES, US, countryName, lockupLabel, type Rules } from "../lib/rules";
 
 /** Step-2 answers as listing facts (empty answers and the street address hidden). */
 function AssetFacts({ a }: { a: MarketAsset }) {
@@ -277,6 +278,7 @@ export function MarketItem() {
               <div className="li"><span className="muted">Token contract</span><a href={addrUrl(net, a.deployment.token)} target="_blank" rel="noreferrer" style={{ fontFamily: "monospace", fontSize: 12, wordBreak: "break-all" }}>{a.deployment.token}</a></div>
             </div>
             <EnforcedRules a={a} />
+            <ListingIssuer assetId={a.id} />
             <ListingApprovals assetId={a.id} />
             {!a.formD && a.exemption === "506c" && (
               <div className="panel sec-terms sec-filing" aria-labelledby="sec-filing-h">
@@ -342,6 +344,8 @@ function BuyPanel({ a, sale, proof, onBought, inSheet }: { a: MarketAsset; sale:
   const [qty, setQty] = useState("");
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ kind: "ok" | "err" | ""; text: string; tx?: string } | null>(null);
+  const [bringing, setBringing] = useState(false);
+  const bringable = canBringUsdc(a.chainId, sale.paySymbol);
 
   const one = 10n ** BigInt(sale.shareDecimals); // base units per whole token (1 for ERC-1155 fractions)
   const units = !sale.vault && /^\d{1,15}$/.test(qty) ? BigInt(qty) * one : 0n;
@@ -452,6 +456,19 @@ function BuyPanel({ a, sale, proof, onBought, inSheet }: { a: MarketAsset; sale:
           {net.testnet && sale.paySymbol === "tUSD" && (
             <button className="btn ghost sm" disabled={!!busy} onClick={getTestUsd} style={{ alignSelf: "flex-start" }}>{busy === "mint" ? "Minting…" : "Get 10,000 test USD (free, testnet only)"}</button>
           )}
+          {bringing ? (
+            <BringUsdc
+              destChainId={a.chainId}
+              account={account}
+              shortfall={cost > payBal ? cost - payBal : 0n}
+              onClose={() => setBringing(false)}
+              onArrived={(amt, mintTx) => {
+                setBringing(false);
+                setMsg({ kind: "ok", text: `${Number(formatUnits(amt, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC arrived on ${net.name}.`, tx: mintTx });
+                refresh(account);
+              }}
+            />
+          ) : <>
           {sale.vault ? (
             <>
               <label className="field">Amount to invest ({sale.paySymbol})
@@ -476,7 +493,14 @@ function BuyPanel({ a, sale, proof, onBought, inSheet }: { a: MarketAsset; sale:
           )}
           {cost > 0n && <div className="li"><span className="muted">You pay</span><b>{fmt(cost)}</b></div>}
           {belowMin && <div className="notice err">The minimum investment is {fmt(sale.minPurchase)}.</div>}
-          {tooPoor && !belowMin && <div className="notice err">Not enough {sale.paySymbol} in this wallet.</div>}
+          {tooPoor && !belowMin && <div className="notice err">Not enough {sale.paySymbol} in this wallet{bringable ? ` on ${net.name}` : ""}.</div>}
+          {bringable && (tooPoor || payBal === 0n) && !belowMin && (
+            <div className="bring-cta" style={{ background: "var(--brand-soft)", border: "1px solid var(--brand-line)", borderRadius: "var(--radius)", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              <b style={{ fontSize: 14 }}>Have USDC on another network?</b>
+              <small className="muted" style={{ lineHeight: 1.5 }}>Bring it here with Circle. It arrives in this same wallet, usually in seconds.</small>
+              <button type="button" className="btn ghost sm" style={{ justifyContent: "center" }} onClick={() => { setMsg(null); setBringing(true); }}>Bring USDC from another network</button>
+            </div>
+          )}
           {overNftLimit && <div className="notice err">At most 50 NFTs per purchase. Buy the rest in another purchase.</div>}
           <button
             className="btn primary"
@@ -487,6 +511,7 @@ function BuyPanel({ a, sale, proof, onBought, inSheet }: { a: MarketAsset; sale:
             {locked ? "Buy unavailable" : busy === "approve" ? `Approve ${sale.paySymbol} in wallet…` : busy === "buy" ? "Confirm purchase in wallet…" : "Buy"}
           </button>
           <p className="muted" style={{ fontSize: 12 }}>{verified === false ? "Buying unlocks once your wallet is approved." : `Two wallet confirmations: allow the sale to take ${sale.paySymbol}, then buy.`}</p>
+          </>}
         </>
       )}
       {msg?.text && (
@@ -639,7 +664,7 @@ function StellarListing({ a, net }: { a: MarketAsset; net: StellarNetwork }) {
                 <>
                   <label htmlFor="st-country" className="muted" style={{ fontSize: 13 }}>Country of residence</label>
                   <select id="st-country" className="input" value={country} onChange={(e) => setCountry(Number(e.target.value))}>
-                    {COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+                    {OPEN_COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
                   </select>
                   <button type="button" className="btn primary" style={{ justifyContent: "center" }} disabled={busy} onClick={request}>{busy ? "Sending…" : "Verify my identity"}</button>
                 </>

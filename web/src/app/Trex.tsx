@@ -2,7 +2,7 @@
 // E3 revoke, E4 token controls), approved 2026-11-18.
 // Only the interface signatures of the audited suite are here (ABI fragments); its GPL bytecode never ships to browsers.
 import { useCallback, useEffect, useState } from "react";
-import { saleWindow } from "../lib/rules";
+import { OPEN_COUNTRIES, saleWindow } from "../lib/rules";
 import { encodeAbiParameters, keccak256, parseAbi, parseAbiItem, parseUnits, type Address, type Hex } from "viem";
 import { api, type Asset } from "../lib/api";
 import { addrUrl, txUrl, type Network } from "../lib/chains";
@@ -111,7 +111,6 @@ export function trexSteps(p: {
 
 interface Row { wallet: Address; identity: Address; verified: boolean; frozen: boolean }
 
-const COUNTRIES: [string, number][] = [["United States", 840], ["United Kingdom", 826], ["Canada", 124], ["Germany", 276], ["France", 250], ["Singapore", 702], ["United Arab Emirates", 784], ["Switzerland", 756], ["Australia", 36], ["Japan", 392]];
 
 export function TrexInvestorsPanel({ asset, net, prefill }: { asset: Asset; net: Network; prefill?: { wallet: string; n: number } | null }) {
   const t = asset.trex!;
@@ -214,7 +213,7 @@ export function TrexInvestorsPanel({ asset, net, prefill }: { asset: Asset; net:
         <label className="field">Investor wallet<input className="input" value={wallet} placeholder="0x… full address" disabled={step > 0} onChange={(e) => setWallet(e.target.value.trim())} /></label>
         <label className="field">Country of residence
           <select className="input" value={country} disabled={step > 0} onChange={(e) => setCountry(Number(e.target.value))}>
-            {COUNTRIES.map(([n, c]) => <option key={c} value={c}>{n}</option>)}
+            {OPEN_COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
           </select>
         </label>
       </div>

@@ -30,6 +30,17 @@ export const Rules = z.object({
   .refine((r) => !r.saleStartsAt || !r.saleEndsAt || r.saleStartsAt < r.saleEndsAt, { message: "the sale must close after it opens", path: ["saleEndsAt"] });
 export type Rules = z.infer<typeof Rules>;
 
+/** Comprehensively sanctioned (OFAC: Cuba, Iran, North Korea, Syria; Russia, Belarus) and FATF call-for-action
+ *  (Myanmar), ISO 3166-1 numeric. Every offering's rules block them (mirrors web/src/lib/rules.ts). */
+export const SANCTIONED = [192, 364, 408, 760, 643, 112, 104];
+export function withSanctions(r: Rules): Rules {
+  if (r.countryMode === "allow") {
+    const countries = r.countries.filter((c) => !SANCTIONED.includes(c));
+    return countries.length ? { ...r, countries } : { ...r, countryMode: "block", countries: SANCTIONED };
+  }
+  return { ...r, countryMode: "block", countries: [...new Set([...SANCTIONED, ...(r.countryMode === "block" ? r.countries : [])])] };
+}
+
 /** Step-2 answers. Keys are short ids per asset class (web/src/lib/questions.ts); values are short text, numbers or
  *  yes/no. Never personal data: these show on the listing. */
 export const Details = z.record(

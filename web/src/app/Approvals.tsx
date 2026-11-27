@@ -39,6 +39,21 @@ export default function ApprovalsPanel({ asset }: { asset: Asset }) {
   );
 }
 
+/** Public listing: whether the issuer's company passed business verification. */
+export function ListingIssuer({ assetId }: { assetId: string }) {
+  const [v, setV] = useState<{ verified: boolean; name: string | null } | null>(null);
+  useEffect(() => { api.marketIssuer(assetId).then(setV, () => setV(null)); }, [assetId]);
+  if (!v) return null;
+  return (
+    <div className="panel sec-terms"><div className="li">
+      <span className="muted">Issuer</span>
+      <span style={{ color: v.verified ? "var(--ok)" : "var(--warn)", textAlign: "right" }}>
+        {v.verified ? `✓ Verified company${v.name ? `: ${v.name}` : ""} (Stripe)` : "Company not verified"}
+      </span>
+    </div></div>
+  );
+}
+
 /** Public listing: counts only, never wallets. */
 export function ListingApprovals({ assetId }: { assetId: string }) {
   const [a, setA] = useState<Omit<ApprovalAudit, "wallets"> | null>(null);

@@ -99,6 +99,45 @@ async function preflight(account: Address, chainId: number) {
   }
 }
 
+const isUnauthorized = (e: any) =>
+  e?.code === 4100 || e?.cause?.code === 4100 || /not been authorized/i.test(`${e?.message ?? ""} ${e?.details ?? ""}`);
+
+/**
+ * MetaMask lets a site use an account but only on the networks the user ticked when connecting. Sending on any other
+ * network fails with 4100 even though eth_accounts and eth_chainId look fine. Ask the extension to re-grant the
+ * account together with this network (MetaMask shows its connect dialog with the network pre-selected).
+ * Returns false when there is no extension to ask (email/passkey/WalletConnect).
+ */
+async function regrant(chainId: number): Promise<boolean> {
+  const ext = thirdweb ? thirdweb.injected : (activeProvider ?? (typeof window !== "undefined" ? window.ethereum : undefined));
+  if (!ext) return false;
+  const chain = numberToHex(chainId);
+  try {
+    await ext.request({
+      method: "wallet_requestPermissions",
+      params: [{ eth_accounts: {}, "endowment:permitted-chains": { caveats: [{ type: "restrictNetworkSwitching", value: [chain] }] } }],
+    });
+  } catch (e: any) {
+    if (e?.code === 4001) throw e;
+    // Wallets without per-site networks reject the MetaMask-specific permission: re-grant the account only.
+    await ext.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
+  }
+  await ext.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chain }] }).catch(() => {});
+  return true;
+}
+
+/** Run a wallet send; if the wallet says the site isn't authorized, re-grant this network once and retry. */
+async function withRegrant<T>(chainId: number, account: Address, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (e) {
+    if (!isUnauthorized(e) || !(await regrant(chainId).catch(() => false))) throw e;
+    if (thirdweb) activeProvider = await thirdweb.forChain(chainId);
+    await preflight(account, chainId);
+    return run();
+  }
+}
+
 /** Remember which wallet request failed, so the error shown says so. */
 function tag(e: any, during: string) {
   if (e && typeof e === "object") e.during = during;
@@ -172,9 +211,11 @@ export function walletClientFor(chainId: number, account: Address) {
 export async function deploy(chainId: number, account: Address, name: keyof typeof ART, args: unknown[]) {
   await ensureChain(chainId);
   await preflight(account, chainId);
-  const wc = walletClientFor(chainId, account);
   const pc = publicClientFor(chainId);
-  const hash = await wc.deployContract({ abi: ART[name].abi, bytecode: ART[name].bytecode, args, account, chain: wc.chain }).catch((e) => { throw tag(e, `sending the ${name} deployment`); });
+  const hash = await withRegrant(chainId, account, () => {
+    const wc = walletClientFor(chainId, account);
+    return wc.deployContract({ abi: ART[name].abi, bytecode: ART[name].bytecode, args, account, chain: wc.chain });
+  }).catch((e) => { throw tag(e, `sending the ${name} deployment`); });
   const rcpt = await pc.waitForTransactionReceipt({ hash, timeout: 180_000 });
   if (rcpt.status !== "success" || !rcpt.contractAddress) throw new Error(`${name} deployment failed (tx ${hash})`);
   return { address: rcpt.contractAddress, hash };
@@ -184,9 +225,11 @@ export async function deploy(chainId: number, account: Address, name: keyof type
 export async function send(chainId: number, account: Address, address: Address, abi: Abi, functionName: string, args: unknown[]) {
   await ensureChain(chainId);
   await preflight(account, chainId);
-  const wc = walletClientFor(chainId, account);
   const pc = publicClientFor(chainId);
-  const hash = await wc.writeContract({ address, abi, functionName, args, account, chain: wc.chain }).catch((e) => { throw tag(e, `sending ${functionName}`); });
+  const hash = await withRegrant(chainId, account, () => {
+    const wc = walletClientFor(chainId, account);
+    return wc.writeContract({ address, abi, functionName, args, account, chain: wc.chain });
+  }).catch((e) => { throw tag(e, `sending ${functionName}`); });
   const rcpt = await pc.waitForTransactionReceipt({ hash, timeout: 180_000 });
   if (rcpt.status !== "success") throw new Error(`${functionName} failed (tx ${hash})`);
   return hash;
@@ -196,11 +239,12 @@ export async function send(chainId: number, account: Address, address: Address, 
 export function walletError(e: unknown): string {
   const any = e as { shortMessage?: string; message?: string; details?: string; code?: number; during?: string; cause?: { code?: number; message?: string } };
   const where = any?.during ? ` (while ${any.during})` : "";
-  if (any?.code === 4100 || any?.cause?.code === 4100 || /not been authorized/i.test(any?.message ?? "")) {
+  if (isUnauthorized(any)) {
     const raw = (any?.details ?? any?.cause?.message ?? "").slice(0, 200);
     return (
       `Your wallet refused the request${where}. Open your wallet, make sure it's unlocked, on the signed-in account, ` +
-      `and that this site is allowed to use this network (MetaMask: click the site icon at the top of the extension → Networks), then press the button again.` +
+      `and that this site is allowed to use this network (MetaMask: click the site icon at the top of the extension → Edit networks → tick this network). ` +
+      `Signed in through WalletConnect? Disconnect and reconnect so your phone wallet approves this network. Then press the button again.` +
       (raw ? ` Wallet said: "${raw}"` : "")
     );
   }

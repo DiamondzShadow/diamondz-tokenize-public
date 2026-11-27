@@ -14,7 +14,7 @@ import { ASSET_CLASSES, assetClassById, standardById, type AssetClassId, type St
 import { useTenant } from "../lib/tenant";
 import { QUESTIONS, aboutLabel, type Details, type Field, type Tag } from "../lib/questions";
 import {
-  COUNTRIES, LOCKUP_CHOICES, countryName, fingerprint, lockupLabel, suggestedRules, type DocFingerprint, type Exemption, type Rules,
+  COUNTRIES, LOCKUP_CHOICES, SANCTIONED, isSanctioned, countryName, fingerprint, lockupLabel, suggestedRules, type DocFingerprint, type Exemption, type Rules,
 } from "../lib/rules";
 import { decodeBuild, effective, exemptionFor, toRules } from "../lib/builder";
 
@@ -549,17 +549,18 @@ export default function NewIssuance() {
                     </select>
                   </RuleRow>
                   <RuleRow title="Countries" isNew="New: per offering" desc={<>Allow or block buyers by country for this offering only. Your other offerings keep their own lists.
+                    <span className="muted" style={{ display: "block", marginTop: 6 }}>Always blocked (sanctions): {SANCTIONED.map(countryName).join(", ")}.</span>
                     {rules.countryMode !== "none" && (
                       <span className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                        {rules.countries.map((c) => <span className="wz-country" key={c}>{countryName(c)}<button type="button" aria-label={`Remove ${countryName(c)}`} onClick={() => setRules({ countries: rules.countries.filter((x) => x !== c) })}>×</button></span>)}
+                        {rules.countries.filter((c) => !isSanctioned(c)).map((c) => <span className="wz-country" key={c}>{countryName(c)}<button type="button" aria-label={`Remove ${countryName(c)}`} onClick={() => setRules({ countries: rules.countries.filter((x) => x !== c) })}>×</button></span>)}
                         <select className="input" style={{ width: 200 }} aria-label="Add a country" value="" onChange={(e) => e.target.value && setRules({ countries: [...new Set([...rules.countries, Number(e.target.value)])] })}>
                           <option value="">Add a country…</option>
-                          {COUNTRIES.filter(([c]) => !rules.countries.includes(c)).map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+                          {COUNTRIES.filter(([c]) => !rules.countries.includes(c) && !isSanctioned(c)).map(([c, n]) => <option key={c} value={c}>{n}</option>)}
                         </select>
                       </span>
                     )}</>}>
-                    <select className="input" aria-label="Country rule" value={rules.countryMode} onChange={(e) => setRules({ countryMode: e.target.value as Rules["countryMode"] })}>
-                      <option value="none">Everywhere</option><option value="allow">Only these countries</option><option value="block">Everywhere except</option>
+                    <select className="input" aria-label="Country rule" value={rules.countryMode === "block" && rules.countries.every(isSanctioned) ? "none" : rules.countryMode} onChange={(e) => setRules({ countryMode: e.target.value as Rules["countryMode"], ...(e.target.value === "none" ? { countries: [] } : {}) })}>
+                      <option value="none">Everywhere else</option><option value="allow">Only these countries</option><option value="block">Everywhere except</option>
                     </select>
                   </RuleRow>
                 </div>

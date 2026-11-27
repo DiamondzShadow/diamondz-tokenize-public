@@ -8,6 +8,7 @@ import Messages from "./app/Messages";
 import { ThirdwebProvider } from "thirdweb/react";
 import "./styles.css";
 import { TenantProvider } from "./lib/tenant";
+import GeoGate from "./lib/GeoGate";
 import Landing from "./pages/Landing";
 import Layout from "./app/Layout";
 import Dashboard from "./app/Dashboard";
@@ -41,6 +42,7 @@ import { IpAssetPage, LicenseCertificate, LicenseCheckout } from "./pages/IP";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <GeoGate>
     <ThirdwebProvider>
     <TenantProvider>
       <BrowserRouter>
@@ -91,6 +93,7 @@ createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
     </TenantProvider>
     </ThirdwebProvider>
+    </GeoGate>
   </StrictMode>,
 );
 
