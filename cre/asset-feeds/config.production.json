@@ -1,0 +1,46 @@
+{
+  "mode": "production",
+  "schedule": "0 */30 * * * *",
+  "feeds": {
+    "WTI": {
+      "chain": "ethereum-mainnet-arbitrum-1",
+      "address": "0x594b919AD828e693B935705c3F816221729E7AE8",
+      "heartbeatSec": 259200,
+      "sequencer": "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"
+    },
+    "SPY": {
+      "chain": "ethereum-mainnet-arbitrum-1",
+      "address": "0x46306F3795342117721D8DEd50fbcF6DF2b3cc10",
+      "heartbeatSec": 259200,
+      "sequencer": "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"
+    },
+    "XAU": {
+      "chain": "ethereum-mainnet-base-1",
+      "address": "0x5213eBB69743b85644dbB6E25cdF994aFBb8cF31",
+      "heartbeatSec": 259200,
+      "sequencer": "0xBCF85224fc0756B9Fa45aA7892530B47e10b6433"
+    },
+    "XAG": {
+      "chain": "ethereum-mainnet-base-1",
+      "address": "0x7dBC779B2A6F9B9AaB83a2dED78A2F7E9e203f0c",
+      "heartbeatSec": 259200,
+      "sequencer": "0xBCF85224fc0756B9Fa45aA7892530B47e10b6433"
+    },
+    "PCE": {
+      "chain": "ethereum-mainnet-base-1",
+      "address": "0x18A3fcA54FaC5B05837205bA4b823fc56191F793",
+      "heartbeatSec": 3024000,
+      "sequencer": "0xBCF85224fc0756B9Fa45aA7892530B47e10b6433"
+    }
+  },
+  "sofrUrl": "https://markets.newyorkfed.org/api/rates/secured/sofr/last/1.json",
+  "storyRpc": "https://mainnet.storyrpc.io",
+  "keyed": {
+    "fred": true,
+    "massive": true
+  },
+  "assets": [],
+  "receiver": "SET_TO_CreAssetFeed_ADDRESS_AFTER_DEPLOY",
+  "writeChain": "ethereum-mainnet-base-1",
+  "gasLimit": "1500000"
+}

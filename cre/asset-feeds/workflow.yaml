@@ -1,0 +1,30 @@
+# CRE workflow targets for asset-feeds.
+# local-simulation: real fetches + consensus, then logs the batch and stops (never deploy or broadcast this target).
+# staging-settings: writes to CreAssetFeed on Base Sepolia once deployed + CRE deploy access is enabled.
+
+local-simulation:
+  user-workflow:
+    workflow-name: asset-feeds-local-simulation
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.local-simulation.json"
+    secrets-path: ""
+
+staging-settings:
+  user-workflow:
+    workflow-name: "asset-feeds-staging"
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: "../secrets.yaml"
+
+production-settings:
+  user-workflow:
+    workflow-name: "asset-feeds-production"
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.production.json"
+    secrets-path: "../secrets.yaml"

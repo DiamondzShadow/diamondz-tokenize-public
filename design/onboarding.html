@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--bg:#070A12;--surface:#0E1320;--surface2:#141B2D;--line:#222C44;--text:#EEF2FA;--muted:#8C98B3;--brand:#7CE7F0;--ok:#4ADE80;--warn:#FBBF24}
+*{box-sizing:border-box;margin:0;padding:0}body{background:#1b1f2a;font-family:Inter,sans-serif;color:var(--text);padding:40px;display:flex;gap:60px;flex-wrap:wrap}
+h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif}
+.frame{background:var(--bg);width:1100px;padding:32px;display:flex;flex-direction:column;gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.bar{height:8px;background:var(--surface2);border-radius:99px}.bar i{display:block;height:8px;width:40%;background:var(--brand);border-radius:99px}
+.step{display:flex;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.c{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.c.d{background:var(--ok);border-color:var(--ok);color:#04121A}.c.n{border-color:var(--brand);color:var(--brand)}
+.step b{font-size:15px}.step small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.btn{padding:10px 16px;border-radius:99px;background:var(--brand);color:#04121A;font-weight:600;font-size:13px;margin-left:auto}
+.ghost{background:none;border:1px solid var(--line);color:var(--text)}.soon{margin-left:auto;font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase}
+.help{border-left:3px solid var(--brand);background:var(--surface);padding:14px 18px;border-radius:0 12px 12px 0;display:flex;gap:30px;font-size:14px}
+.help div{flex:1}.help b{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);margin-bottom:4px}
+.modal{width:560px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:32px;display:flex;flex-direction:column;gap:16px}
+.dots{display:flex;gap:6px}.dots i{width:24px;height:6px;border-radius:9px;background:var(--line)}.dots i.on{background:var(--brand)}
+</style></head><body>
+<div class="frame" id="checklist">
+ <h2>Dashboard — setup checklist</h2>
+ <div class="panel"><div style="display:flex;justify-content:space-between"><h3>Get set up</h3><span style="color:var(--muted);font-size:13px">2 of 6 done</span></div><div class="bar"><i></i></div>
+  <div class="step"><span class="c d">✓</span><div><b>Brand your investor site</b><small>Name, logo and colors investors will see.</small></div></div>
+  <div class="step"><span class="c d">✓</span><div><b>Set where money goes</b><small>Treasury multisig, payment methods and payout currency.</small></div></div>
+  <div class="step"><span class="c n">3</span><div><b>Create your first asset</b><small>Pick the asset type; we recommend the token standard.</small></div><span class="btn">Start →</span></div>
+  <div class="step"><span class="c">4</span><div><b>Get legal sign-off</b><small>Your counsel picks the exemption and approves the documents.</small></div><span class="btn ghost">Mark done</span></div>
+  <div class="step"><span class="c">5</span><div><b>Verify investors (KYC)</b><small>Investors pass identity checks before they can buy.</small></div><span class="soon">Coming soon</span></div>
+  <div class="step"><span class="c">6</span><div><b>Deploy on testnet, then go live</b><small>Practice on a test network first. Mainnet after sign-off.</small></div><span class="soon">Coming soon</span></div>
+ </div>
+ <div class="help"><div><b>What this page is for</b>Create the token for one asset. Your draft saves as you go and nothing goes on chain yet.</div><div><b>What's next</b>After you save, get your counsel to approve the terms, then verify investors.</div></div>
+</div>
+<div class="frame" id="tour" style="width:640px;align-items:center">
+ <h2>Welcome tour (first sign-in)</h2>
+ <div class="modal"><div class="dots"><i class="on"></i><i></i><i></i><i></i></div><span style="font-size:40px">🏢</span><h2>Turn a real asset into tokens</h2><p style="color:var(--muted);line-height:1.6">Tokens are digital shares of something real: a building, an oil royalty, a song. Investors buy them, and income from the asset is paid to them automatically.</p><div style="display:flex;justify-content:space-between"><span class="btn ghost" style="margin:0">Skip</span><span class="btn" style="margin:0">Next →</span></div></div>
+</div>
+</body></html>

@@ -1,0 +1,12 @@
+[submodule "contracts/lib/T-REX"]
+	path = contracts/lib/T-REX
+	url = https://github.com/TokenySolutions/T-REX.git
+[submodule "contracts/lib/onchain-id"]
+	path = contracts/lib/onchain-id
+	url = https://github.com/onchain-id/solidity.git
+[submodule "contracts/lib/openzeppelin-contracts-v4"]
+	path = contracts/lib/openzeppelin-contracts-v4
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
+[submodule "contracts/lib/openzeppelin-contracts-upgradeable-v4"]
+	path = contracts/lib/openzeppelin-contracts-upgradeable-v4
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git

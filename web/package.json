@@ -1,0 +1,40 @@
+{
+  "name": "web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@stellar/freighter-api": "6.0.1",
+    "@sumsub/websdk": "2.9.1",
+    "connect-web-sdk": "2.3.0",
+    "qrcode-generator": "1.4.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "7",
+    "thirdweb": "5.122.1",
+    "viem": "2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "oxlint": "^1.90.0",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6"
+  },
+  "overrides": {
+    "ws": "8.23.0",
+    "decode-uri-component": "0.5.1",
+    "js-yaml": "4.3.2",
+    "toml": "5.0.1",
+    "uuid": "11.1.1",
+    "zod": "4.6.7"
+  }
+}

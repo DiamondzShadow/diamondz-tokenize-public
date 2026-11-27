@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Diamondz Tokenize — design frames</title>
+<style>
+:root{
+  --bg:#070A12; --surface:#0E1320; --surface2:#141B2D; --line:#222C44;
+  --text:#EEF2FA; --muted:#8C98B3; --brand:#7CE7F0; --brand2:#A78BFA; --ok:#4ADE80; --warn:#FBBF24;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1b1f2a;font-family:Inter,system-ui,sans-serif;color:var(--text);padding:40px;display:flex;flex-direction:column;gap:80px}
+h1,h2,h3,.display{font-family:"Space Grotesk",Inter,sans-serif;letter-spacing:-0.02em}
+.frame{background:var(--bg);width:1440px;overflow:hidden}
+.frame.app{width:1440px;height:960px;display:flex}
+.frame.mobile{width:390px}
+.wrap{padding:0 96px}
+a{color:inherit;text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:999px;font-weight:600;font-size:15px}
+.btn.primary{background:var(--brand);color:#04121A}
+.btn.ghost{border:1px solid var(--line);color:var(--text)}
+.btn.sm{padding:9px 16px;font-size:13px}
+.pill{align-self:flex-start;width:max-content;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.eyebrow{font-size:13px;font-weight:600;color:var(--brand);text-transform:uppercase;letter-spacing:.12em}
+.muted{color:var(--muted)}
+/* nav */
+.nav{display:flex;align-items:center;justify-content:space-between;height:80px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-family:"Space Grotesk";font-weight:700;font-size:20px}
+.mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+.links{display:flex;gap:32px;font-size:15px;color:var(--muted)}
+/* hero */
+.hero{display:flex;gap:64px;align-items:center;padding-top:96px;padding-bottom:96px}
+.hero-copy{flex:1;display:flex;flex-direction:column;gap:24px}
+.hero h1{font-size:72px;line-height:1.02;font-weight:700}
+.hero h1 span{color:var(--brand)}
+.hero p{font-size:20px;line-height:1.5;color:var(--muted);max-width:560px}
+.row{display:flex;gap:12px;align-items:center}
+.hero-card{width:520px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:18px}
+.tok{display:flex;justify-content:space-between;align-items:center;padding:16px;background:var(--surface2);border-radius:12px}
+.tok b{font-size:16px}
+.tok small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.tag{justify-self:start;width:max-content;font-size:12px;padding:4px 10px;border-radius:999px;background:#12303A;color:var(--brand);font-weight:600}
+.tag.v{background:#241C3E;color:var(--brand2)}
+.tag.g{background:#10301E;color:var(--ok)}
+.tag.y{background:#33280C;color:var(--warn)}
+/* stats */
+.stats{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{flex:1;padding:32px 0 32px 32px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:none}
+.stat b{font-family:"Space Grotesk";font-size:36px;display:block}
+.stat span{color:var(--muted);font-size:14px}
+/* sections */
+.section{padding-top:112px;padding-bottom:112px;display:flex;flex-direction:column;gap:48px}
+.section-head{display:flex;flex-direction:column;gap:14px;max-width:720px}
+.section-head h2{font-size:48px;line-height:1.08}
+.section-head p{font-size:18px;color:var(--muted);line-height:1.55}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;gap:12px}
+.card .ico{width:44px;height:44px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px}
+.card h3{font-size:20px}
+.card p{font-size:14px;line-height:1.5;color:var(--muted)}
+.card .std{font-size:12px;color:var(--brand);font-weight:600}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.step{padding:24px;border-top:2px solid var(--brand);background:var(--surface);border-radius:0 0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.step .n{font-family:"Space Grotesk";color:var(--brand);font-size:14px;font-weight:700}
+.step h3{font-size:18px}
+.step p{font-size:14px;color:var(--muted);line-height:1.5}
+/* white label */
+.wl{display:flex;gap:48px;align-items:center;background:linear-gradient(135deg,#0F1A2B,#171233);border:1px solid var(--line);border-radius:24px;padding:56px}
+.wl-copy{flex:1;display:flex;flex-direction:column;gap:20px}
+.wl-copy h2{font-size:44px;line-height:1.08}
+.checks{display:flex;flex-direction:column;gap:12px;font-size:16px}
+.checks div::before{content:"✓  ";color:var(--ok);font-weight:700}
+.tenants{width:520px;display:flex;flex-direction:column;gap:14px}
+.tenant{display:flex;align-items:center;gap:14px;background:rgba(7,10,18,.6);border:1px solid var(--line);border-radius:14px;padding:16px}
+.tenant .tm{width:36px;height:36px;border-radius:10px}
+.tenant b{font-size:15px}
+.tenant small{display:block;font-size:13px;color:var(--muted)}
+.tenant .tag{margin-left:auto}
+/* standards */
+.std-table{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.std-row{display:grid;grid-template-columns:220px 1fr 1fr 160px;padding:18px 24px;border-bottom:1px solid var(--line);font-size:15px;align-items:center}
+.std-row:last-child{border-bottom:none}
+.std-row.h{background:var(--surface2);color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.std-row b{font-family:"Space Grotesk"}
+/* cta + footer */
+.cta{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px;padding:96px 0}
+.cta h2{font-size:56px}
+.footer{border-top:1px solid var(--line);padding:40px 96px;display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.disclaimer{padding:0 96px 40px;font-size:12px;line-height:1.6;color:#5F6B86;max-width:1100px}
+/* APP */
+.side{width:248px;background:var(--surface);border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:6px}
+.side .logo{padding:0 8px 24px;font-size:17px}
+.side a{padding:10px 12px;border-radius:10px;font-size:14px;color:var(--muted);display:flex;gap:10px}
+.side a.on{background:var(--surface2);color:var(--text)}
+.side .tenant-sw{margin-top:auto;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px}
+.main{flex:1;display:flex;flex-direction:column}
+.topbar{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+.topbar h1{font-size:22px}
+.content{padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.kpi span{font-size:13px;color:var(--muted)}
+.kpi b{display:block;font-family:"Space Grotesk";font-size:28px;margin-top:8px}
+.kpi small{font-size:12px;color:var(--ok)}
+.table{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tr{display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr 1fr 1fr 1fr;padding:14px 20px;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
+.tr:last-child{border-bottom:none}
+.tr.h{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;background:var(--surface2)}
+.tr small{display:block;color:var(--muted);font-size:12px}
+.two{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.panel h3{font-size:16px}
+.li{display:flex;justify-content:space-between;font-size:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:none}
+/* wizard */
+.stepper{display:flex;gap:8px}
+.stepper div{flex:1;padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.stepper div.on{border-color:var(--brand);color:var(--text)}
+.stepper div.done{color:var(--ok)}
+.choice-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.choice{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.choice.sel{border:2px solid var(--brand);background:#0D1E27}
+.choice b{font-size:15px}
+.choice span{font-size:13px;color:var(--muted);line-height:1.45}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.input{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text)}
+.form3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.actions{display:flex;justify-content:space-between;align-items:center;padding-top:8px}
+/* branding */
+.brand-split{display:grid;grid-template-columns:440px 1fr;gap:24px}
+.swatches{display:flex;gap:10px}
+.sw{width:44px;height:44px;border-radius:10px;border:2px solid transparent}
+.sw.on{border-color:#fff}
+.toggle{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:8px 0}
+.tg{width:40px;height:22px;border-radius:999px;background:var(--brand);position:relative}
+.tg::after{content:"";position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#04121A}
+.tg.off{background:var(--line)}
+.tg.off::after{left:3px;right:auto;background:var(--muted)}
+.preview{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#FAF7F0;color:#1C1A16}
+.pv-nav{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;border-bottom:1px solid #E7E1D3;font-size:14px}
+.pv-logo{display:flex;gap:10px;align-items:center;font-family:"Space Grotesk";font-weight:700;font-size:18px}
+.pv-mark{width:24px;height:24px;border-radius:6px;background:#8A5A1F}
+.pv-hero{padding:48px 28px;display:flex;flex-direction:column;gap:14px}
+.pv-hero h2{font-size:40px;line-height:1.05}
+.pv-hero p{color:#6B6455;font-size:15px;max-width:440px}
+.pv-btn{display:inline-flex;padding:12px 20px;border-radius:8px;background:#8A5A1F;color:#fff;font-weight:600;font-size:14px;width:max-content}
+.pv-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 28px 32px}
+.pv-card{background:#fff;border:1px solid #E7E1D3;border-radius:10px;padding:16px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.pv-card b{font-size:15px}
+.pv-foot{padding:14px 28px;border-top:1px solid #E7E1D3;font-size:12px;color:#8E8776}
+/* mobile */
+.m-nav{display:flex;justify-content:space-between;align-items:center;padding:18px 16px;border-bottom:1px solid var(--line)}
+.m-hero{padding:40px 16px;display:flex;flex-direction:column;gap:18px}
+.m-hero h1{font-size:40px;line-height:1.05}
+.m-hero p{font-size:16px;color:var(--muted);line-height:1.5}
+.m-list{padding:0 16px 40px;display:flex;flex-direction:column;gap:12px}
+
+/* payments */
+.pay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.pay{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;gap:12px}
+.pay h3{font-size:19px}
+.pay p{font-size:14px;line-height:1.5;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--line)}
+.soon{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warn)}
+.flow{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;font-size:14px}
+.flow .node{padding:10px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);font-weight:600}
+.flow .arr{color:var(--brand);font-weight:700}
+.trust{display:flex;gap:12px;flex-wrap:wrap}
+.trust .chip{background:#0D1E27;border-color:#1D3A47;color:var(--brand)}
+</style>
+</head>
+<body>
+
+<!-- ============ 1. MARKETING LANDING ============ -->
+<div class="frame" id="landing" data-name="01 Landing — desktop">
+  <div class="wrap nav">
+    <div class="logo"><div class="mark"></div>Diamondz Tokenize</div>
+    <div class="links"><a>Asset classes</a><a>How it works</a><a>Standards</a><a>Payments</a><a>White-label</a><a>Docs</a></div>
+    <div class="row"><a class="btn ghost sm">Sign in</a><a class="btn primary sm">Book a demo</a></div>
+  </div>
+
+  <div class="wrap hero">
+    <div class="hero-copy">
+      <span class="pill"><span class="dot"></span>Issuance, compliance and distributions in one stack</span>
+      <h1>Tokenize any asset.<br><span>Under your brand.</span></h1>
+      <p>Real estate, energy, private credit, funds, music royalties and more. Structure it, verify investors, issue the token and pay holders, from one platform you can run as your own.</p>
+      <div class="row"><a class="btn primary">Start tokenizing</a><a class="btn ghost">Launch your white-label</a></div>
+    </div>
+    <div class="hero-card">
+      <div class="row" style="justify-content:space-between"><b>Live issuances</b><span class="muted" style="font-size:13px">Testnet preview</span></div>
+      <div class="tok"><div><b>Oak Ridge Duplex SPV</b><small>Real estate · ERC-3643</small></div><span class="tag">Permissioned</span></div>
+      <div class="tok"><div><b>Permian Royalty Pool I</b><small>Energy · ERC-4626 vault</small></div><span class="tag v">Yield</span></div>
+      <div class="tok"><div><b>"Midnight" Master Rights</b><small>Music IP · Story Protocol</small></div><span class="tag g">Royalties</span></div>
+      <div class="tok"><div><b>Vintage Cask No. 12</b><small>Collectible · ERC-1155</small></div><span class="tag y">Fractional</span></div>
+    </div>
+  </div>
+
+  <div class="wrap"><div class="stats">
+    <div class="stat"><b>8</b><span>asset classes supported</span></div>
+    <div class="stat"><b>5</b><span>token standards</span></div>
+    <div class="stat"><b>4+</b><span>EVM chains, plus Story</span></div>
+    <div class="stat"><b>1</b><span>codebase for every white-label</span></div>
+  </div></div>
+
+  <div class="wrap section">
+    <div class="section-head"><span class="eyebrow">Asset classes</span><h2>One platform for every kind of asset</h2><p>Each asset class ships with a default legal wrapper, token standard and compliance rules. Change any of them per issuance.</p></div>
+    <div class="grid4">
+      <div class="card"><div class="ico">🏢</div><h3>Real estate</h3><p>Single properties or portfolios held in an SPV, with rental income paid to holders.</p><span class="std">ERC-3643</span></div>
+      <div class="card"><div class="ico">🛢️</div><h3>Energy &amp; commodities</h3><p>Oil and gas royalties, mineral rights and warehoused commodities with reserve reports.</p><span class="std">ERC-3643 · ERC-4626</span></div>
+      <div class="card"><div class="ico">📈</div><h3>Private equity &amp; SPVs</h3><p>Company shares and deal-by-deal SPVs with cap-table sync and lockups.</p><span class="std">ERC-3643</span></div>
+      <div class="card"><div class="ico">🏦</div><h3>Private credit</h3><p>Loans, invoices and receivables with scheduled interest and maturity.</p><span class="std">ERC-3643 · ERC-4626</span></div>
+      <div class="card"><div class="ico">🧺</div><h3>Funds &amp; yield vaults</h3><p>Pooled funds where investors hold shares of the pool and NAV updates on chain.</p><span class="std">ERC-4626</span></div>
+      <div class="card"><div class="ico">🎵</div><h3>Music &amp; IP royalties</h3><p>Song masters, publishing and licenses registered as IP with automatic royalty splits.</p><span class="std">Story Protocol</span></div>
+      <div class="card"><div class="ico">🥃</div><h3>Collectibles &amp; art</h3><p>Fine art, spirits casks, watches and memorabilia, whole or fractional.</p><span class="std">ERC-721 · ERC-1155</span></div>
+      <div class="card"><div class="ico">🌱</div><h3>Carbon &amp; impact</h3><p>Carbon credits and impact assets with retirement tracking and registry links.</p><span class="std">ERC-1155</span></div>
+    </div>
+  </div>
+
+  <div class="wrap section" style="padding-top:0">
+    <div class="section-head"><span class="eyebrow">How it works</span><h2>From asset to investor in five steps</h2></div>
+    <div class="steps">
+      <div class="step"><span class="n">01</span><h3>Structure</h3><p>Pick the asset class, legal wrapper and offering exemption. Upload the documents.</p></div>
+      <div class="step"><span class="n">02</span><h3>Verify</h3><p>Investors pass KYC, AML and accreditation checks. Results become on-chain claims.</p></div>
+      <div class="step"><span class="n">03</span><h3>Issue</h3><p>Deploy the token with its compliance rules. Admin keys go to the issuer's multisig.</p></div>
+      <div class="step"><span class="n">04</span><h3>Distribute</h3><p>Rent, royalties and interest are paid to holders pro rata, in stablecoins.</p></div>
+      <div class="step"><span class="n">05</span><h3>Trade</h3><p>Transfers between verified holders, or through a licensed trading partner.</p></div>
+    </div>
+  </div>
+
+  <div class="wrap section" style="padding-top:0">
+    <div class="wl">
+      <div class="wl-copy">
+        <span class="eyebrow">White-label</span>
+        <h2>Your brand, your domain, our rails</h2>
+        <p class="muted" style="font-size:17px;line-height:1.55">Launch a tokenization platform for your clients without building one. Every tenant runs on the same audited stack with its own look, asset menu and fees.</p>
+        <div class="checks">
+          <div>Your custom domain, logo, colors and fonts</div>
+          <div>Choose which asset classes and chains you offer</div>
+          <div>Your own KYC provider account and investor database</div>
+          <div>Set your platform fee on issuance and distributions</div>
+          <div>Separate admin multisig per tenant</div>
+        </div>
+        <div class="row" style="margin-top:8px"><a class="btn primary">Become a partner</a><a class="btn ghost">See the admin console</a></div>
+      </div>
+      <div class="tenants">
+        <div class="tenant"><div class="tm" style="background:#8A5A1F"></div><div><b>Heritage Realty Capital</b><small>invest.heritagerealty.com</small></div><span class="tag">Real estate</span></div>
+        <div class="tenant"><div class="tm" style="background:#1F6F5C"></div><div><b>Basin Energy Partners</b><small>tokens.basinenergy.com</small></div><span class="tag v">Energy</span></div>
+        <div class="tenant"><div class="tm" style="background:#B83280"></div><div><b>Cadence Music Rights</b><small>own.cadencemusic.io</small></div><span class="tag g">Music IP</span></div>
+        <p class="muted" style="font-size:12px">Example tenants for illustration.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap section" style="padding-top:0">
+    <div class="section-head"><span class="eyebrow">Standards</span><h2>The right token for each asset</h2></div>
+    <div class="std-table">
+      <div class="std-row h"><span>Standard</span><span>What it is</span><span>Best for</span><span>Transfers</span></div>
+      <div class="std-row"><b>ERC-3643</b><span class="muted">Permissioned security token with on-chain identity</span><span>Real estate, equity, credit</span><span class="tag">Verified only</span></div>
+      <div class="std-row"><b>ERC-4626</b><span class="muted">Vault shares in a pooled asset</span><span>Funds, yield, royalty pools</span><span class="tag v">Configurable</span></div>
+      <div class="std-row"><b>ERC-721</b><span class="muted">One token per unique asset</span><span>Deeds, art, single items</span><span class="tag y">Configurable</span></div>
+      <div class="std-row"><b>ERC-1155</b><span class="muted">Many units of one item</span><span>Fractions, casks, carbon credits</span><span class="tag y">Configurable</span></div>
+      <div class="std-row"><b>Story IP</b><span class="muted">Registered IP with programmable royalties</span><span>Music, film, brands</span><span class="tag g">Royalty splits</span></div>
+    </div>
+  </div>
+
+
+  <div class="wrap section" style="padding-top:0" id="payments-section">
+    <div class="section-head"><span class="eyebrow">Payments</span><h2>Money in, money out, on the rails people already use</h2><p>Investors pay by card, bank transfer or stablecoin. Holders receive rent, royalties and interest in the stablecoin or bank account they choose.</p></div>
+    <div class="pay-grid">
+      <div class="pay"><h3>Card checkout</h3><p>Investors buy with a debit or credit card. Card details are handled by the payment processor and never touch the platform.</p><div class="chips"><span class="chip">Visa</span><span class="chip">Mastercard</span><span class="chip">Apple Pay</span><span class="chip">Google Pay</span></div></div>
+      <div class="pay"><h3>Stablecoins</h3><p>Pay and get paid in the dollar and euro stablecoins that major card networks already settle in, on the chain you prefer.</p><div class="chips"><span class="chip">USDC</span><span class="chip">USDG</span><span class="chip">PYUSD</span><span class="chip">EURC</span></div></div>
+      <div class="pay"><h3>Bank transfer</h3><p>ACH and wire for larger tickets, converted to stablecoin on arrival and back to dollars on payout.</p><div class="chips"><span class="chip">ACH</span><span class="chip">Wire</span><span class="chip">SEPA</span></div></div>
+      <div class="pay"><h3>Automatic distributions</h3><p>Income is split pro rata across verified holders on a schedule, with a statement for every payout.</p><div class="chips"><span class="chip">Monthly</span><span class="chip">Quarterly</span><span class="chip">On event</span></div></div>
+      <div class="pay"><span class="soon">Coming soon</span><h3>Spend payouts by card</h3><p>Holders spend stablecoin distributions anywhere cards are accepted, through a card-network stablecoin partner.</p></div>
+      <div class="pay"><span class="soon">Institutional · coming soon</span><h3>Tokenized bank deposits</h3><p>Settle large subscriptions in bank-issued deposit tokens, which US regulators treat as deposits, not stablecoins.</p></div>
+    </div>
+    <div class="flow"><span class="node">Investor pays by card, bank or USDC</span><span class="arr">→</span><span class="node">KYC check passes</span><span class="arr">→</span><span class="node">Token minted to wallet</span><span class="arr">→</span><span class="node">Income arrives</span><span class="arr">→</span><span class="node">Paid out pro rata</span></div>
+    <div class="trust"><span class="chip">ERC-7943 compliance interface</span><span class="chip">Chainlink ACE policy checks</span><span class="chip">Cross-chain verified identity</span><span class="chip">Issuer multisig admin</span></div>
+  </div>
+  <div class="wrap cta">
+    <h2>Bring your first asset on chain</h2>
+    <p class="muted" style="font-size:18px">Start on testnet today. Go live once your counsel signs off.</p>
+    <div class="row"><a class="btn primary">Start tokenizing</a><a class="btn ghost">Talk to us</a></div>
+  </div>
+
+  <div class="footer"><span>© 2026 Diamondz Tokenize</span><span>Terms · Privacy · Risk disclosures · Docs</span></div>
+  <p class="disclaimer">Diamondz Tokenize provides software. It is not a broker-dealer, exchange, transfer agent or investment adviser. Offerings are made by issuers under their own exemptions, and secondary trading of securities is available only through licensed partners where permitted.</p>
+</div>
+
+<!-- ============ 2. ISSUER DASHBOARD ============ -->
+<div class="frame app" id="dashboard" data-name="02 App — Issuer dashboard">
+  <div class="side">
+    <div class="logo"><div class="mark"></div>Diamondz Tokenize</div>
+    <a class="on">▦ Dashboard</a><a>◆ Assets</a><a>＋ New issuance</a><a>👤 Investors &amp; KYC</a><a>💸 Distributions</a><a>⇄ Transfers</a><a>📄 Documents</a><a>🎨 Branding</a><a>⚙ Settings</a>
+    <div class="tenant-sw"><span class="muted">Tenant</span><br><b>Diamondz (default)</b></div>
+  </div>
+  <div class="main">
+    <div class="topbar"><h1>Dashboard</h1><div class="row"><span class="pill"><span class="dot" style="background:var(--warn)"></span>Testnet</span><a class="btn primary sm">＋ New issuance</a></div></div>
+    <div class="content">
+      <div class="kpis">
+        <div class="kpi"><span>Assets issued</span><b>4</b><small>2 live · 2 draft</small></div>
+        <div class="kpi"><span>Verified investors</span><b>128</b><small>+14 this week</small></div>
+        <div class="kpi"><span>Capital raised</span><b>$2.41M</b><small>across 2 offerings</small></div>
+        <div class="kpi"><span>Paid to holders</span><b>$38,920</b><small>last 90 days</small></div>
+      </div>
+      <div class="table">
+        <div class="tr h"><span>Asset</span><span>Standard</span><span>Chain</span><span>Raised</span><span>Holders</span><span>Status</span></div>
+        <div class="tr"><span><b>Oak Ridge Duplex SPV</b><small>Real estate</small></span><span>ERC-3643</span><span>Base</span><span>$1.20M</span><span>64</span><span class="tag g">Live</span></div>
+        <div class="tr"><span><b>Permian Royalty Pool I</b><small>Energy</small></span><span>ERC-4626</span><span>Arbitrum</span><span>$1.21M</span><span>52</span><span class="tag g">Live</span></div>
+        <div class="tr"><span><b>"Midnight" Master Rights</b><small>Music IP</small></span><span>Story IP</span><span>Story</span><span>—</span><span>—</span><span class="tag y">Draft</span></div>
+        <div class="tr"><span><b>Vintage Cask No. 12</b><small>Collectible</small></span><span>ERC-1155</span><span>Polygon</span><span>—</span><span>—</span><span class="tag y">Draft</span></div>
+      </div>
+      <div class="two">
+        <div class="panel"><h3>Needs attention</h3>
+          <div class="li"><span>12 investors waiting on accreditation review</span><a class="btn ghost sm">Review</a></div>
+          <div class="li"><span>Q4 rent distribution for Oak Ridge is ready to send</span><a class="btn ghost sm">Send</a></div>
+          <div class="li"><span>Permian reserve report expires in 21 days</span><a class="btn ghost sm">Upload</a></div>
+        </div>
+        <div class="panel"><h3>Compliance</h3>
+          <div class="li"><span class="muted">KYC provider</span><span>Sumsub · connected</span></div>
+          <div class="li"><span class="muted">Admin multisig</span><span>Safe · 2 of 3</span></div>
+          <div class="li"><span class="muted">Allowed countries</span><span>US (506c), Reg S list</span></div>
+          <div class="li"><span class="muted">Transfer agent</span><span class="muted">Not connected</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. NEW ISSUANCE WIZARD ============ -->
+<div class="frame app" id="wizard" data-name="03 App — New issuance wizard">
+  <div class="side">
+    <div class="logo"><div class="mark"></div>Diamondz Tokenize</div>
+    <a>▦ Dashboard</a><a>◆ Assets</a><a class="on">＋ New issuance</a><a>👤 Investors &amp; KYC</a><a>💸 Distributions</a><a>⇄ Transfers</a><a>📄 Documents</a><a>🎨 Branding</a><a>⚙ Settings</a>
+    <div class="tenant-sw"><span class="muted">Tenant</span><br><b>Diamondz (default)</b></div>
+  </div>
+  <div class="main">
+    <div class="topbar"><h1>New issuance</h1><span class="muted" style="font-size:13px">Draft saved 2 min ago</span></div>
+    <div class="content">
+      <div class="stepper"><div class="done">✓ 1 · Asset class</div><div class="on">2 · Token &amp; terms</div><div>3 · Compliance</div><div>4 · Documents</div><div>5 · Review &amp; deploy</div></div>
+      <div><h3 style="font-size:18px;margin-bottom:6px">Real estate · choose a token standard</h3><p class="muted" style="font-size:14px">We recommend ERC-3643 for real estate held in an SPV, because transfers are limited to verified investors.</p></div>
+      <div class="choice-grid">
+        <div class="choice sel"><b>ERC-3643</b><span>Permissioned security token. Recommended.</span><span class="tag" style="width:max-content">Recommended</span></div>
+        <div class="choice"><b>ERC-4626 vault</b><span>Investors hold shares of a pool of properties.</span></div>
+        <div class="choice"><b>ERC-721 deed</b><span>One token represents the whole property.</span></div>
+        <div class="choice"><b>ERC-1155 fractions</b><span>Fixed number of fractional units.</span></div>
+      </div>
+      <div class="form3">
+        <div class="field">Token name<div class="input">Oak Ridge Duplex SPV</div></div>
+        <div class="field">Symbol<div class="input">OAKR</div></div>
+        <div class="field">Chain<div class="input">Base ▾</div></div>
+        <div class="field">Total supply<div class="input">1,200,000</div></div>
+        <div class="field">Price per token<div class="input">$1.00 USDC</div></div>
+        <div class="field">Minimum investment<div class="input">$500</div></div>
+        <div class="field">Distribution schedule<div class="input">Quarterly ▾</div></div>
+        <div class="field">Lockup<div class="input">12 months (Rule 144) ▾</div></div>
+        <div class="field">Platform fee<div class="input">1.5% of raise · 25 bps of distributions</div></div>
+      </div>
+      <div class="actions"><a class="btn ghost">← Back</a><div class="row"><a class="btn ghost">Save draft</a><a class="btn primary">Continue to compliance →</a></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4. WHITE-LABEL BRANDING ============ -->
+<div class="frame app" id="branding" data-name="04 App — White-label branding">
+  <div class="side">
+    <div class="logo"><div class="mark"></div>Diamondz Tokenize</div>
+    <a>▦ Dashboard</a><a>◆ Assets</a><a>＋ New issuance</a><a>👤 Investors &amp; KYC</a><a>💸 Distributions</a><a>⇄ Transfers</a><a>📄 Documents</a><a class="on">🎨 Branding</a><a>⚙ Settings</a>
+    <div class="tenant-sw"><span class="muted">Tenant</span><br><b>Heritage Realty Capital</b></div>
+  </div>
+  <div class="main">
+    <div class="topbar"><h1>Branding &amp; domain</h1><div class="row"><a class="btn ghost sm">Discard</a><a class="btn primary sm">Publish changes</a></div></div>
+    <div class="content">
+      <div class="brand-split">
+        <div class="panel">
+          <h3>Identity</h3>
+          <div class="field">Platform name<div class="input">Heritage Realty Capital</div></div>
+          <div class="field">Logo<div class="input">heritage-logo.svg · Replace</div></div>
+          <div class="field">Primary color<div class="swatches"><div class="sw on" style="background:#8A5A1F"></div><div class="sw" style="background:#1F6F5C"></div><div class="sw" style="background:#2B4C9B"></div><div class="sw" style="background:#B83280"></div><div class="sw" style="background:#7CE7F0"></div></div></div>
+          <div class="field">Theme<div class="input">Light ▾</div></div>
+          <h3 style="margin-top:6px">Domain</h3>
+          <div class="field">Custom domain<div class="input">invest.heritagerealty.com</div></div>
+          <div class="li"><span class="muted">DNS</span><span style="color:var(--ok)">CNAME verified · TLS active</span></div>
+          <h3 style="margin-top:6px">Offerings</h3>
+          <div class="toggle"><span>Real estate</span><div class="tg"></div></div>
+          <div class="toggle"><span>Private credit</span><div class="tg"></div></div>
+          <div class="toggle"><span>Funds &amp; yield vaults</span><div class="tg off"></div></div>
+          <div class="toggle"><span>Show "Powered by Diamondz"</span><div class="tg off"></div></div>
+        </div>
+        <div class="preview">
+          <div class="pv-nav"><div class="pv-logo"><div class="pv-mark"></div>Heritage Realty Capital</div><span>Offerings · Portfolio · Sign in</span></div>
+          <div class="pv-hero"><span style="font-size:12px;font-weight:700;letter-spacing:.12em;color:#8A5A1F">LIVE PREVIEW</span><h2>Own a share of income-producing property</h2><p>Invest from $500 in professionally managed properties and receive quarterly rental income.</p><span class="pv-btn">View offerings</span></div>
+          <div class="pv-cards">
+            <div class="pv-card"><b>Oak Ridge Duplex</b><span>Austin, TX</span><span>Target yield 7.2%</span></div>
+            <div class="pv-card"><b>Maple Court Flats</b><span>Columbus, OH</span><span>Target yield 6.8%</span></div>
+            <div class="pv-card"><b>Harbor Retail Strip</b><span>Tampa, FL</span><span>Coming soon</span></div>
+          </div>
+          <div class="pv-foot">Offerings are made by Heritage Realty Capital under Reg D 506(c). Sample content.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============ 6. PAYMENTS SETTINGS ============ -->
+<div class="frame app" id="payments" data-name="06 App — Payments &amp; payouts">
+  <div class="side">
+    <div class="logo"><div class="mark"></div>Diamondz Tokenize</div>
+    <a>▦ Dashboard</a><a>◆ Assets</a><a>＋ New issuance</a><a>👤 Investors &amp; KYC</a><a class="on">💸 Payments &amp; payouts</a><a>⇄ Transfers</a><a>📄 Documents</a><a>🎨 Branding</a><a>⚙ Settings</a>
+    <div class="tenant-sw"><span class="muted">Tenant</span><br><b>Diamondz (default)</b></div>
+  </div>
+  <div class="main">
+    <div class="topbar"><h1>Payments &amp; payouts</h1><a class="btn primary sm">Save</a></div>
+    <div class="content">
+      <div class="two">
+        <div class="panel"><h3>How investors can pay</h3>
+          <div class="toggle"><span>Card checkout <span class="muted">· Stripe</span></span><div class="tg"></div></div>
+          <div class="toggle"><span>USDC</span><div class="tg"></div></div>
+          <div class="toggle"><span>USDG</span><div class="tg"></div></div>
+          <div class="toggle"><span>PYUSD</span><div class="tg off"></div></div>
+          <div class="toggle"><span>EURC</span><div class="tg off"></div></div>
+          <div class="toggle"><span>ACH / wire</span><div class="tg"></div></div>
+          <div class="toggle"><span>Tokenized bank deposits <span class="soon">soon</span></span><div class="tg off"></div></div>
+        </div>
+        <div class="panel"><h3>Payout settings</h3>
+          <div class="field">Default payout currency<div class="input">USDC on Base ▾</div></div>
+          <div class="field">Holders may choose<div class="input">USDC, USDG, bank account (ACH)</div></div>
+          <div class="field">Platform fee on distributions<div class="input">25 bps</div></div>
+          <div class="field">Treasury wallet (receives raises)<div class="input">Issuer Safe · 2 of 3</div></div>
+          <div class="li"><span class="muted">Card spend of payouts</span><span class="soon">Partner pending</span></div>
+        </div>
+      </div>
+      <div class="table">
+        <div class="tr h"><span>Recent payment</span><span>Method</span><span>Asset</span><span>Amount</span><span>Fee</span><span>Status</span></div>
+        <div class="tr"><span><b>Subscription</b><small>investor 0x… verified</small></span><span>Card</span><span>OAKR</span><span>$5,000</span><span>$75</span><span class="tag g">Settled</span></div>
+        <div class="tr"><span><b>Subscription</b><small>wire ref 4471</small></span><span>Wire</span><span>PRP1</span><span>$50,000</span><span>$750</span><span class="tag y">Pending</span></div>
+        <div class="tr"><span><b>Q3 distribution</b><small>64 holders</small></span><span>USDC</span><span>OAKR</span><span>$18,400</span><span>$46</span><span class="tag g">Paid</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ============ 5. MOBILE LANDING ============ -->
+<div class="frame mobile" id="mobile" data-name="05 Landing — mobile">
+  <div class="m-nav"><div class="logo" style="font-size:17px"><div class="mark" style="width:24px;height:24px"></div>Diamondz Tokenize</div><span style="font-size:22px">☰</span></div>
+  <div class="m-hero">
+    <span class="pill" style="width:max-content"><span class="dot"></span>Issuance to distributions</span>
+    <h1>Tokenize any asset. <span style="color:var(--brand)">Under your brand.</span></h1>
+    <p>Real estate, energy, private credit, funds, music royalties and more, from one platform you can run as your own.</p>
+    <a class="btn primary" style="justify-content:center">Start tokenizing</a>
+    <a class="btn ghost" style="justify-content:center">Launch your white-label</a>
+  </div>
+  <div class="m-list">
+    <span class="eyebrow">Asset classes</span>
+    <div class="card"><div class="row"><div class="ico">🏢</div><div><h3 style="font-size:17px">Real estate</h3><span class="std">ERC-3643</span></div></div></div>
+    <div class="card"><div class="row"><div class="ico">🛢️</div><div><h3 style="font-size:17px">Energy &amp; commodities</h3><span class="std">ERC-3643 · ERC-4626</span></div></div></div>
+    <div class="card"><div class="row"><div class="ico">🎵</div><div><h3 style="font-size:17px">Music &amp; IP royalties</h3><span class="std">Story Protocol</span></div></div></div>
+    <div class="card"><div class="row"><div class="ico">🧺</div><div><h3 style="font-size:17px">Funds &amp; yield vaults</h3><span class="std">ERC-4626</span></div></div></div>
+  </div>
+</div>
+
+</body>
+</html>

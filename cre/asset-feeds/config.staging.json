@@ -1,0 +1,62 @@
+{
+  "mode": "production",
+  "schedule": "0 */30 * * * *",
+  "feeds": {
+    "WTI": {
+      "chain": "ethereum-mainnet-arbitrum-1",
+      "address": "0x594b919AD828e693B935705c3F816221729E7AE8",
+      "heartbeatSec": 259200,
+      "sequencer": "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"
+    },
+    "SPY": {
+      "chain": "ethereum-mainnet-arbitrum-1",
+      "address": "0x46306F3795342117721D8DEd50fbcF6DF2b3cc10",
+      "heartbeatSec": 259200,
+      "sequencer": "0xFdB631F5EE196F0ed6FAa767959853A9F217697D"
+    },
+    "XAU": {
+      "chain": "ethereum-mainnet-base-1",
+      "address": "0x5213eBB69743b85644dbB6E25cdF994aFBb8cF31",
+      "heartbeatSec": 259200,
+      "sequencer": "0xBCF85224fc0756B9Fa45aA7892530B47e10b6433"
+    },
+    "XAG": {
+      "chain": "ethereum-mainnet-base-1",
+      "address": "0x7dBC779B2A6F9B9AaB83a2dED78A2F7E9e203f0c",
+      "heartbeatSec": 259200,
+      "sequencer": "0xBCF85224fc0756B9Fa45aA7892530B47e10b6433"
+    },
+    "PCE": {
+      "chain": "ethereum-mainnet-base-1",
+      "address": "0x18A3fcA54FaC5B05837205bA4b823fc56191F793",
+      "heartbeatSec": 3024000,
+      "sequencer": "0xBCF85224fc0756B9Fa45aA7892530B47e10b6433"
+    }
+  },
+  "sofrUrl": "https://markets.newyorkfed.org/api/rates/secured/sofr/last/1.json",
+  "storyRpc": "https://mainnet.storyrpc.io",
+  "keyed": {
+    "fred": false,
+    "massive": false
+  },
+  "assets": [
+    {
+      "category": "energy",
+      "label": "DEMO Blanket (energy, Base Sepolia)",
+      "token": "0x1E84DAFfFA4DCC4D74a4951403b9fbC6A832752C",
+      "bblPerDay": "120",
+      "royaltyBps": 1250
+    },
+    {
+      "category": "real-estate",
+      "label": "DEMO drama (New York real estate, Base Sepolia)",
+      "token": "0xC239A8647F00EE01587659AA5B169aA21A60779d",
+      "appraisedValueUsd": "100000000",
+      "appraisalIndex": "1146.86",
+      "fredSeries": "NYSTHPI"
+    }
+  ],
+  "receiver": "0x3F4396417f142fD406215E8437C448Cb28bf7552",
+  "writeChain": "ethereum-testnet-sepolia-base-1",
+  "gasLimit": "1500000"
+}

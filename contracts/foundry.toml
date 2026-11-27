@@ -1,0 +1,35 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+# No single solc pin: our contracts are 0.8.28, while the vendored audited ERC-3643 suites (T-REX 4.1.6, OnchainID
+# 2.2.1, GPL-3.0, pinned submodules) require `pragma solidity 0.8.17` exactly. Foundry picks a compiler per file;
+# the restrictions below keep our own sources on exactly 0.8.28 so already-deployed bytecode stays reproducible.
+auto_detect_solc = true
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+# Context remappings must come BEFORE the global ones, or the global OZ v5 path shadows them.
+remappings = [
+  "lib/T-REX/:@openzeppelin/contracts/=lib/openzeppelin-contracts-v4/contracts/",
+  "lib/T-REX/:@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable-v4/contracts/",
+  "lib/T-REX/:@onchain-id/solidity/=lib/onchain-id/",
+  "lib/onchain-id/:@openzeppelin/contracts/=lib/openzeppelin-contracts-v4/contracts/",
+  "lib/onchain-id/:@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable-v4/contracts/",
+  "src/trex/:@openzeppelin/contracts/=lib/openzeppelin-contracts-v4/contracts/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "forge-std/=lib/forge-std/src/",
+  "@tokeny/t-rex/=lib/T-REX/",
+  "@onchain-id/solidity/=lib/onchain-id/",
+]
+
+[[profile.default.compilation_restrictions]]
+paths = "src/{compliance,distribution,factory,interfaces,ip,oracle,sale,test-helpers,tokens,utils,vaults}/**"
+version = "=0.8.28"
+
+[[profile.default.compilation_restrictions]]
+paths = "test/*.sol"
+version = "=0.8.28"
+
+[fmt]
+line_length = 110

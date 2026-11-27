@@ -1,0 +1,15 @@
+{
+  "rwa_claim_topics_and_issuers_example": "2cbbc311bddbba637f5d48f2dbf5d09a74af120a69b656dc864b68faffad849b",
+  "rwa_claim_issuer_example": "d3c54263136fb8bb7cb79c66e2ccb1dcb27aec5de383d499d4a5bcb25a184d42",
+  "rwa_identity_example": "bdabdd228716a19cc2dfd0bda283c39f0979b0bf9041d28c6a86baf4e2baf768",
+  "rwa_identity_registry_example": "a281391fcfbbe95e5de702d45b19095a6b42c6c00e585431214c7c140efa96e1",
+  "rwa_identity_verifier_example": "6ea2a404f77e4f3e34daca0ea7ed56dd2bc29127aecf2786455128876b63d769",
+  "rwa_compliance_example": "a7f6972ca3c938fb9dcab970a65bf9b983173fb36cdb8e218f6052d98336071f",
+  "rwa_token_example": "5d2dd2b7fc73e7661532f04f3367f033affd181dd59cd66311487fc88fb756ba",
+  "compliance_supply_limit": "b0ed4bd7dd69bafeba985c249fd34cb6b6d78d68901c216aef26cfec64044c1d",
+  "compliance_max_balance": "e2fdfbf460fd5b4c2dd6df3053f28c0fe5c548fb46888f886e54e341fc282fa3",
+  "compliance_country_allow": "17e744be528b3f0e50334886238debadd5fb30ea576de2affcbe88a41307f2d8",
+  "compliance_country_restrict": "53810896aafeb25baec610f786393be8b4d3257e1bf7efd3c810a89b1f1833f0",
+  "compliance_initial_lockup_period": "6d39b026eab4956901afd61d6bc90b2f4b8b24957297343eda512cb22cd1fe27",
+  "diamondz_stellar_sale": "30035311aa17c162662d551569aec12958f129cfa337482667a921ab117fe815"
+}

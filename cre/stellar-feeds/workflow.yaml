@@ -1,0 +1,21 @@
+# CRE workflow targets for stellar-feeds (Stellar offerings → CreAssetFeed / AssetOracle on Base).
+# local-simulation: real reads + consensus, then logs the batch and stops (never deploy or broadcast this target).
+# staging-settings: writes to CreAssetFeed on Base Sepolia once deployed (CRE deploy access must be enabled).
+
+local-simulation:
+  user-workflow:
+    workflow-name: stellar-feeds-local-simulation
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.local-simulation.json"
+    secrets-path: "./secrets.yaml"
+
+staging-settings:
+  user-workflow:
+    workflow-name: "stellar-feeds-staging"
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: "./secrets.yaml"
