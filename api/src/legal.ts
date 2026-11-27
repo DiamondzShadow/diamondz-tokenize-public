@@ -66,6 +66,8 @@ export interface LegalDeps {
   issuerEmails: (tenantId: string) => Promise<string[]>;
   origin: (c: Context<any>) => string;
   tooMany: (key: string, max: number, windowMs: number) => boolean;
+  /** White-label sender for the issuer's workspace (verified domain), else the platform sender. */
+  senderFor?: (tenantId: string) => Promise<{ from: string; replyTo: string | null } | null>;
 }
 
 // ------------------------------------------------------------------ Stripe Connect (company verification)
@@ -207,7 +209,9 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     await store.putDoc({ coll: "legal-links", id: l.tokenHash, tenant_id: a.tenantId, data: JSON.stringify({ assetId: a.id }), created_at: now(), updated_at: now() });
     const issuer = await deps.tenantName(a.tenantId);
     const link = `${deps.origin(c)}/counsel/${token}`;
+    const sender = await deps.senderFor?.(a.tenantId);
     const sent = await sendEmail({
+      ...(sender ? { from: sender.from, replyTo: sender.replyTo } : {}),
       to: [b.data.email], subject: `Sign-off requested: ${a.name} (${issuer})`,
       html: `<div style="font:14px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;color:#111;max-width:560px"><p>Dear ${escHtml(b.data.name)},</p><p><b>${escHtml(issuer)}</b> has named you as securities counsel for <b>${escHtml(a.name)}</b> and asks you to review and sign off before it goes live on Diamondz Tokenize.</p><p><a href="${escHtml(link)}">Review the offering and sign</a></p><p style="color:#666">For your security, the page sends a one-time code to this inbox before it opens. The link expires in 30 days. If you don't represent this issuer, ignore this email.</p></div>`,
       text: `Dear ${b.data.name},\n\n${issuer} has named you as securities counsel for ${a.name} and asks you to review and sign off before it goes live on Diamondz Tokenize.\n\nReview and sign: ${link}\n\nThe page sends a one-time code to this inbox before it opens. The link expires in 30 days.`,
@@ -255,7 +259,8 @@ export function mountLegal(app: Hono<any>, deps: LegalDeps) {
     if (x.l.code && Date.now() - x.l.code.at < 60_000) return c.json({ error: "A code was just sent. Wait a minute before asking for another." }, 429);
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     await putLegal(x.asset.id, x.asset.tenantId, { ...x.l, code: { hash: sha(code), at: Date.now(), tries: 0 } }, x.d.created_at);
-    const sent = await sendEmail({ to: [x.l.counsel.email], subject: `Your Diamondz Tokenize code: ${code}`, html: `<p style="font:16px -apple-system,Segoe UI,sans-serif">Your code to open the sign-off page is <b style="font-size:22px;letter-spacing:2px">${code}</b>. It expires in 10 minutes.</p>`, text: `Your code: ${code} (expires in 10 minutes)` });
+    const sender = await deps.senderFor?.(x.asset.tenantId);
+    const sent = await sendEmail({ ...(sender ? { from: sender.from } : {}), to: [x.l.counsel.email], subject: `Your sign-off code: ${code}`, html: `<p style="font:16px -apple-system,Segoe UI,sans-serif">Your code to open the sign-off page is <b style="font-size:22px;letter-spacing:2px">${code}</b>. It expires in 10 minutes.</p>`, text: `Your code: ${code} (expires in 10 minutes)` });
     if (sent !== "sent") return c.json({ error: "We couldn't send the code. Try again shortly." }, 502);
     return c.json({ ok: true, email: mask(x.l.counsel.email) });
   });

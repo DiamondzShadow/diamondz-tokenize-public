@@ -35,6 +35,9 @@ import ClientPortal from "./pages/ClientPortal";
 import Reviews from "./app/Reviews";
 import Counsel from "./pages/Counsel";
 import SignRequest from "./pages/SignRequest";
+import SiteGate from "./lib/SiteGate";
+import WhiteLabelPage from "./app/WhiteLabel";
+import WhiteLabelAdmin from "./app/WhiteLabelAdmin";
 import Signing from "./app/Signing";
 import EntityInvest from "./pages/EntityInvest";
 import UseCasePage, { UseCasesIndex } from "./pages/UseCases";
@@ -48,6 +51,7 @@ createRoot(document.getElementById("root")!).render(
     <ThirdwebProvider>
     <TenantProvider>
       <BrowserRouter>
+        <SiteGate>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/market" element={<MarketList />} />
@@ -83,6 +87,9 @@ createRoot(document.getElementById("root")!).render(
             <Route path="clients" element={<Clients />} />
             <Route path="reviews" element={<Reviews />} />
             <Route path="signing" element={<Signing />} />
+            <Route path="white-label" element={<WhiteLabelPage />} />
+            <Route path="white-label/:section" element={<WhiteLabelPage />} />
+            <Route path="white-label-sites" element={<WhiteLabelAdmin />} />
             <Route path="payments" element={<Payments />} />
             <Route path="payouts" element={<PayoutsPage />} />
             <Route path="investors" element={<InvestorsPage />} />
@@ -94,6 +101,7 @@ createRoot(document.getElementById("root")!).render(
           </Route>
           <Route path="*" element={<Landing />} />
         </Routes>
+        </SiteGate>
       </BrowserRouter>
     </TenantProvider>
     </ThirdwebProvider>

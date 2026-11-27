@@ -8,6 +8,8 @@ export interface Tenant {
   id: string;
   name: string;
   hosts: string[];
+  /** White-label site state for the host being visited (GET /api/tenant only). */
+  site?: { customDomain: string | null; live: boolean; legal: { slug: string; title: string }[] };
   brand: { primary: string; theme: "dark" | "light"; logoUrl?: string };
   offerings: AssetClassId[];
   poweredBy: boolean;
@@ -249,6 +251,21 @@ export interface EsignSignerView { offering: string; assetClass: string; issuer:
 export interface EsignPlatform { configured: boolean; webhook: { url: string; id: string | null; at: string } | null; attester: string | null; firms: (EsignFirm & { addedBy: string })[]; requests: EsignRequest[]; kinds: { id: string; name: string }[] }
 export interface EsignSendBody { kind: string; firmId: string; signerName: string; signerEmail: string; idMethod: "GOV_ID" | "PHONE"; phone?: { countryCode: string; phone: string }; note: string }
 
+/** White-label site setup (api/src/whitelabel.ts; designs W1–W6). */
+export interface WlRecord { type: string; name: string; value: string; found?: boolean; priority?: number; status?: string }
+export interface WhiteLabel {
+  plan: string; whitelabel: boolean; cfConnected: boolean; emailConnected: boolean; target: string;
+  steps: { brand: boolean; domain: boolean; team: boolean; email: boolean; identity: boolean; legal: boolean; footer: boolean };
+  done: number; total: number; ready: boolean;
+  domain: { name: string; addedAt: string | null; checkedAt: string | null; cname: WlRecord; txt: WlRecord | null; cfStatus: string | null; ssl: string | null; answers: boolean; errors: string[] } | null;
+  email: { name: string; address: string; replyTo: string | null; domain: string; status: string; records: WlRecord[] } | null;
+  legal: { slug: string; title: string; published: boolean }[];
+  live: { at: string; by: string } | null;
+  preview: string | null;
+}
+export interface WlLegalPage { slug: string; title: string; draft: string; draftAt: string | null; published: { at: string; text: string } | null; versions: { at: string; by: string }[]; pdf: { sha256: string; bytes: number; at: string } | null }
+export interface WlAdmin { cfConnected: boolean; target: string; fallback: { origin: string; status: string } | null; sites: (WhiteLabel & { tenantId: string; name: string })[] }
+
 export const api = {
   // ---- Stellar edition
   stellarDeploy: (id: string, issuer: string) => req<Asset>(`/assets/${id}/stellar/deploy`, { method: "POST", body: JSON.stringify({ issuer }) }),
@@ -282,6 +299,30 @@ export const api = {
   formDRemove: (assetId: string) => req<Asset>(`/assets/${assetId}/formd`, { method: "DELETE" }),
   tenant: () => req<Tenant>("/tenant"),
   updateTenant: (patch: Partial<Tenant>) => req<Tenant>("/tenant", { method: "PATCH", body: JSON.stringify(patch) }),
+  // ---- white-label site
+  whitelabel: () => req<WhiteLabel>("/whitelabel"),
+  wlDomain: (domain: string) => req<WhiteLabel>("/whitelabel/domain", { method: "POST", body: JSON.stringify({ domain }) }),
+  wlRemoveDomain: () => req<WhiteLabel>("/whitelabel/domain", { method: "DELETE" }),
+  wlCheck: () => req<WhiteLabel>("/whitelabel/check", { method: "POST" }),
+  wlLive: (live: boolean) => req<WhiteLabel>("/whitelabel/live", { method: "POST", body: JSON.stringify({ live }) }),
+  wlEmail: (b: { name: string; address: string; replyTo: string | null }) => req<WhiteLabel>("/whitelabel/email", { method: "POST", body: JSON.stringify(b) }),
+  wlEmailVerify: () => req<WhiteLabel>("/whitelabel/email/verify", { method: "POST" }),
+  wlEmailTest: () => req<{ ok: true; to: string }>("/whitelabel/email/test", { method: "POST" }),
+  wlLegal: () => req<{ pages: WlLegalPage[] }>("/whitelabel/legal"),
+  wlLegalSave: (slug: string, b: { title: string; text: string }) => req<{ ok: true }>(`/whitelabel/legal/${slug}`, { method: "PUT", body: JSON.stringify(b) }),
+  wlLegalPublish: (slug: string) => req<{ ok: true; publishedAt: string }>(`/whitelabel/legal/${slug}/publish`, { method: "POST" }),
+  wlLegalPdf: async (slug: string, f: File) => {
+    const res = await fetch(`/api/whitelabel/legal/${slug}/pdf`, { method: "POST", body: f, credentials: "same-origin", headers: { "content-type": "application/pdf" } });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(j?.error ?? "Upload failed");
+    return j as { ok: true; sha256: string };
+  },
+  wlLegalDelete: (slug: string) => req<{ ok: true }>(`/whitelabel/legal/${slug}`, { method: "DELETE" }),
+  siteLegal: (slug: string) => req<{ slug: string; title: string; text: string | null; publishedAt: string | null; pdf: string | null }>(`/site/legal/${encodeURIComponent(slug)}`),
+  sitePreview: (k: string) => req<{ ok: boolean }>(`/site/preview?k=${encodeURIComponent(k)}`),
+  platformWhitelabel: () => req<WlAdmin>("/platform/whitelabel"),
+  wlSetup: () => req<{ fallback: { origin: string; status: string } }>("/platform/whitelabel/setup", { method: "POST" }),
+  wlRecheck: () => req<{ rechecked: number }>("/platform/whitelabel/recheck", { method: "POST" }),
   assets: () => req<Asset[]>("/assets"),
   asset: (id: string) => req<Asset>(`/assets/${id}`),
   createAsset: (a: Partial<Asset>) => req<Asset>("/assets", { method: "POST", body: JSON.stringify(a) }),

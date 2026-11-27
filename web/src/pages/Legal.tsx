@@ -1,12 +1,50 @@
 // /legal/privacy · /legal/terms · /legal/risk — the platform's legal pages (text in ../legal/content.ts).
 // Counsel notes in the drafts ([COUNSEL: …]) are hidden unless the URL has ?review=1.
 import { Link, NavLink, useLocation, useParams } from "react-router-dom";
-import { Fragment, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { api } from "../lib/api";
+import MiniMarkdown from "../lib/MiniMarkdown";
 import { SiteHeader } from "../lib/Chrome";
 import { useTenant } from "../lib/tenant";
 import { COMPANY, LEGAL_DOCS, UPDATED, type Block, type LegalDoc } from "../legal/content";
 
+/** A white-label customer's own page for this slug (W5), when they've published one. */
+function TenantLegal({ slug }: { slug: string }) {
+  const { tenant } = useTenant();
+  const [p, setP] = useState<{ title: string; text: string | null; publishedAt: string | null; pdf: string | null } | null | undefined>(undefined);
+  useEffect(() => { setP(undefined); api.siteLegal(slug).then(setP, () => setP(null)); }, [slug]);
+  useEffect(() => { if (p) document.title = `${p.title} · ${tenant?.name ?? ""}`; }, [p, tenant]);
+  const pages = tenant?.site?.legal ?? [];
+  return (
+    <div className="page">
+      <SiteHeader />
+      <section className="wrap legal">
+        <nav className="legal-tabs" aria-label="Legal documents">
+          {pages.map((d) => <NavLink key={d.slug} to={`/legal/${d.slug}`} className={({ isActive }) => (isActive ? "on" : "")}>{d.title}</NavLink>)}
+        </nav>
+        {p === undefined ? <p className="muted">Loading…</p> : !p ? <p className="muted">That page doesn't exist. Choose a document above.</p> : (
+          <article className="legal-doc">
+            <header>
+              <h1>{p.title}</h1>
+              <p className="muted legal-meta">{tenant?.name}{p.publishedAt ? ` · Last updated ${new Date(p.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` : ""}</p>
+              {p.pdf && <p><a href={p.pdf} target="_blank" rel="noreferrer">Open the PDF ↗</a></p>}
+            </header>
+            {p.text && <MiniMarkdown text={p.text} />}
+          </article>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export default function Legal() {
+  const { doc: slug } = useParams();
+  const { tenant } = useTenant();
+  if (slug && tenant?.site?.legal?.some((d) => d.slug === slug)) return <TenantLegal slug={slug} />;
+  return <PlatformLegal />;
+}
+
+function PlatformLegal() {
   const { doc: slug } = useParams();
   const { tenant } = useTenant();
   const { search, hash } = useLocation();

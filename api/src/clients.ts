@@ -35,6 +35,8 @@ export const consentMessage = (firm: string, wallet: string, ref: string) =>
 
 export interface ClientDeps {
   store: Store;
+  /** White-label sender for this workspace (verified domain), else the platform sender. */
+  senderFor?: (tenantId: string) => Promise<{ from: string; replyTo: string | null } | null>;
   requireAdmin: (c: Context<any>, next: () => Promise<void>) => Promise<Response | void>;
   tenantId: (c: Context<any>) => string;
   tenantName: (id: string) => Promise<string>;
@@ -99,8 +101,10 @@ export function mountClients(app: Hono<any>, deps: ClientDeps) {
     await store.putDoc({ coll: "clients", id, tenant_id: tid, data: JSON.stringify(cl), created_at: now(), updated_at: now() });
     await store.putDoc({ coll: "client-links", id: sha(token), tenant_id: tid, data: JSON.stringify({ clientId: id }), created_at: now(), updated_at: now() });
     const link = `${deps.origin(c)}/client/${token}`;
+    const sender = await deps.senderFor?.(tid);
     const sent = await sendEmail({
-      to: [b.data.email], subject: `${firm} invited you to Diamondz Tokenize`,
+      ...(sender ? { from: sender.from, replyTo: sender.replyTo } : {}),
+      to: [b.data.email], subject: sender ? `${firm} invited you to your client page` : `${firm} invited you to Diamondz Tokenize`,
       html: `<div style="font:14px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;color:#111;max-width:560px"><p>${escHtml(firm)} would like to manage your tokenized investments with you.</p><p><a href="${escHtml(link)}">Open your client page</a></p><p style="color:#666">You keep your own wallet and approve every purchase yourself.</p></div>`,
       text: `${firm} would like to manage your tokenized investments with you.\n\nYour client page: ${link}\n\nYou keep your own wallet and approve every purchase yourself.`,
     });

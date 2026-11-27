@@ -50,6 +50,8 @@ export interface Store {
   setTenantConfig(id: string, config: string): Promise<void>;
   hostsOf(tenantId: string): Promise<string[]>;
   addHost(host: string, tenantId: string): Promise<void>;
+  /** Remove a host only if it belongs to this tenant (white-label custom domains). */
+  removeHost(host: string, tenantId: string): Promise<void>;
   // sessions
   createSession(row: SessionRow): Promise<void>;
   getSession(idHash: string): Promise<SessionRow | null>;
@@ -185,6 +187,7 @@ export class SqliteStore implements Store {
   async setTenantConfig(id: string, config: string) { this.run("UPDATE tenants SET config = ? WHERE id = ?", config, id); }
   async hostsOf(tenantId: string) { return this.all<{ host: string }>("SELECT host FROM tenant_hosts WHERE tenant_id = ? ORDER BY host", tenantId).map((r) => r.host); }
   async addHost(host: string, tenantId: string) { this.run("INSERT OR IGNORE INTO tenant_hosts (host, tenant_id) VALUES (?, ?)", host, tenantId); }
+  async removeHost(host: string, tenantId: string) { this.run("DELETE FROM tenant_hosts WHERE host = ? AND tenant_id = ?", host, tenantId); }
 
   async createSession(r: SessionRow) { this.run("INSERT INTO sessions (id_hash, tenant_id, email, name, expires_at, account) VALUES (?, ?, ?, ?, ?, ?)", r.id_hash, r.tenant_id, r.email, r.name, r.expires_at, r.account?.toLowerCase() ?? null); }
   async setSessionTenant(idHash: string, tenantId: string) { this.run("UPDATE sessions SET tenant_id = ? WHERE id_hash = ?", tenantId, idHash); }
@@ -333,6 +336,7 @@ export class MongoStore implements Store {
   async setTenantConfig(id: string, config: string) { await this.c("tenants").updateOne({ _id: id }, { $set: { config } }); }
   async hostsOf(tenantId: string) { return (await this.c("tenant_hosts").find({ tenant_id: tenantId }).sort({ _id: 1 }).toArray()).map((d) => d._id as string); }
   async addHost(host: string, tenantId: string) { await this.c("tenant_hosts").updateOne({ _id: host }, { $setOnInsert: { tenant_id: tenantId } }, { upsert: true }); }
+  async removeHost(host: string, tenantId: string) { await this.c("tenant_hosts").deleteOne({ _id: host, tenant_id: tenantId } as any); }
 
   async createSession(r: SessionRow) { const { id_hash, ...rest } = r; await this.c("sessions").insertOne({ _id: id_hash, ...rest, account: r.account?.toLowerCase() ?? null }); }
   async setSessionTenant(idHash: string, tenantId: string) { await this.c("sessions").updateOne({ _id: idHash }, { $set: { tenant_id: tenantId } }); }

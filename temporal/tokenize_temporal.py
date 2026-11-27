@@ -60,6 +60,8 @@ JOBS: dict[str, tuple[timedelta, timedelta]] = {
     "security-evidence": (timedelta(days=30), timedelta(minutes=10)),
     # Adobe Acrobat Sign: catch any signed / expired agreement whose webhook was missed (api/src/esign.ts).
     "esign-poll": (timedelta(minutes=10), timedelta(minutes=8)),
+    # White-label custom domains + sender domains still being set up (api/src/whitelabel.ts).
+    "whitelabel-check": (timedelta(minutes=5), timedelta(minutes=4)),
 }
 
 

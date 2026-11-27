@@ -30,6 +30,7 @@ import { mfaGate, mountMfa } from "./mfa";
 import { mountClients } from "./clients";
 import { mountLegal } from "./legal";
 import { mountEsign } from "./esign";
+import { mountWhitelabel } from "./whitelabel";
 import { mountCsp } from "./csp";
 import { mountApprovals } from "./approvals";
 import { MongoStore, SqliteStore, type Role, type Store, type TenantRow, type LeadRow } from "./store";
@@ -377,7 +378,7 @@ app.get("/manifest.webmanifest", (c) => {
     categories: ["finance", "business"], icons, shortcuts,
   }));
 });
-app.get("/tenant", async (c) => c.json(await publicTenant(c.get("tenant"))));
+app.get("/tenant", async (c) => c.json({ ...(await publicTenant(c.get("tenant"))), site: await whitelabel.siteInfo(c.get("tenant").id, hostOf(c)) }));
 app.get("/auth/me", requireAdmin, (c) => c.json({ ...c.get("session"), role: c.get("member").role }));
 
 app.post("/auth/google", async (c) => {
@@ -1355,6 +1356,20 @@ mountCsp(app, {
   tooMany,
 });
 
+// ------------------------------------------------------------------ white-label site setup (W1–W6)
+const whitelabel = mountWhitelabel(app, {
+  store,
+  requireAdmin,
+  isPlatformAdmin: (c) => (c as Context<Env>).get("tenant").id === DEFAULT_TENANT && ["owner", "admin"].includes((c as Context<Env>).get("member").role),
+  tenantId: (c) => (c as Context<Env>).get("tenant").id,
+  siteId: (c) => (c as Context<Env>).get("site").id,
+  member: (c) => ({ ...(c as Context<Env>).get("member"), email: (c as Context<Env>).get("session")?.email ?? null }),
+  plan: async (id) => { const t = await store.getTenant(id); return t ? ((JSON.parse(t.config) as TenantConfig).plan ?? "launch") : "launch"; },
+  tenantConfig: async (id) => { const t = await store.getTenant(id); return t ? JSON.parse(t.config) : null; },
+  tenantName: async (id) => { const t = await store.getTenant(id); return t ? (JSON.parse(t.config) as TenantConfig).name : "Issuer"; },
+  tooMany,
+});
+
 // ------------------------------------------------------------------ legal sign-off you can trust (L1–L4)
 const legal = mountLegal(app, {
   store,
@@ -1373,6 +1388,7 @@ const legal = mountLegal(app, {
   },
   origin: (c) => `https://${hostOf(c)}`,
   tooMany,
+  senderFor: (tid) => whitelabel.senderFor(tid),
 });
 // ------------------------------------------------------------------ signed checks through Adobe Acrobat Sign (E1–E7)
 mountEsign(app, {
@@ -1406,6 +1422,7 @@ const ERC20_BAL = [
 ] as const;
 mountClients(app, {
   store,
+  senderFor: (tid) => whitelabel.senderFor(tid),
   requireAdmin,
   tenantId: (c) => (c as Context<Env>).get("tenant").id,
   tenantName: async (id) => { const t = await store.getTenant(id); return t ? (JSON.parse(t.config) as TenantConfig).name : "Your advisor"; },

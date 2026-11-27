@@ -32,8 +32,8 @@ with its checks signed on chain.
 - **Payouts that reach people.** Merkle distributions in USDC, gas-free claims, and automatic delivery after seven
   days.
 - **Flat fees.** Monthly plan + setup + a flat fee per mainnet offering, paid on chain.
-- **White-label from one codebase.** Each tenant is a host name with its own brand, asset menu, KYC accounts and
-  claim issuers.
+- **White-label from one codebase.** Each customer gets a guided setup: their own domain with a certificate issued
+  automatically, email from their own address, their own legal pages, and their brand, asset menu and claim issuers.
 
 ## Try it in five minutes (no accounts needed)
 
@@ -81,6 +81,7 @@ settings are present. `tokenize.env.example` explains every setting.
 | **Temporal Cloud** | Scheduled jobs with retries and history | `TEMPORAL_JOBS=1` + `temporal/` worker | temporal.io |
 | **Chainlink CRE** | Market data written next to listings | see `cre/README.md` | docs.chain.link/cre |
 | **SEC EDGAR** | Attach the issuer's Form D | `SEC_EDGAR_UA` | free, no account |
+| **Cloudflare for SaaS** | White-label customers on their own domain | `CF_API_TOKEN`, `CF_ZONE_ID` | dash.cloudflare.com › SSL/TLS › Custom Hostnames |
 
 **Your own contracts.** Networks, contract addresses and oracles live in `web/src/lib/chains.ts`. To put the
 proof-of-asset oracle on a test network with your own wallet:

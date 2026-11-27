@@ -50,13 +50,14 @@ ${message ? `<div style="white-space:pre-wrap;padding:12px 14px;background:#f5f5
 }
 
 /** A one-off transactional email (team invites, owner links). Same provider and rules as lead alerts. */
-export async function sendEmail(m: { to: string[]; subject: string; html: string; text: string }): Promise<"sent" | "skipped" | "failed"> {
+/** `from` / `replyTo`: a white-label tenant's verified sender (api/src/whitelabel.ts senderFor); defaults to NOTIFY_FROM. */
+export async function sendEmail(m: { to: string[]; subject: string; html: string; text: string; from?: string | null; replyTo?: string | null }): Promise<"sent" | "skipped" | "failed"> {
   if (!emailConfigured() || !m.to.length) return "skipped";
   try {
     const res = await fetch(RESEND_URL, {
       method: "POST",
       headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: process.env.NOTIFY_FROM, to: m.to, subject: oneLine(m.subject, 180), html: m.html, text: m.text }),
+      body: JSON.stringify({ from: m.from || process.env.NOTIFY_FROM, to: m.to, subject: oneLine(m.subject, 180), html: m.html, text: m.text, ...(m.replyTo ? { reply_to: m.replyTo } : {}) }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) { console.error(`[notify] email failed: HTTP ${res.status}`); return "failed"; }
